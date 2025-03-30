@@ -36,7 +36,7 @@ const freelancerNavItems = [
   },
   {
     title: "Account",
-    href: "/freelancer-dashboard/accounts",
+    href: "/freelancer-dashboard/account",
     icon: <User className="h-5 w-5" />,
   },
 ]

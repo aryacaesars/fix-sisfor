@@ -21,6 +21,7 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+
   accounts       Account[]
   sessions       Session[]
   boards         KanbanBoard[]

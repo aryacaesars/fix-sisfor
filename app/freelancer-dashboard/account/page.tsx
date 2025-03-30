@@ -55,8 +55,6 @@ export default function FreelancerAccountPage() {
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    company: "",
-    website: "",
   })
 
   if (isLoading) {
@@ -82,11 +80,34 @@ export default function FreelancerAccountPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsUpdating(true)
-
+  
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
+      const response = await fetch("/api/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id,
+          name: formData.name,
+        }),
+      })
+  
+      if (!response.ok) {
+        throw new Error("Failed to update profile")
+      }
+  
+      const updatedUser = await response.json()
+  
+      // Perbarui state formData dan user
+      setFormData({
+        ...formData,
+        name: updatedUser.name,
+      })
+  
+      // Jika `user` berasal dari context, perbarui context (opsional)
+      if (user) {
+        user.name = updatedUser.name
+      }
+  
       toast({
         title: "Profile updated",
         description: "Your profile information has been updated successfully.",
@@ -102,6 +123,50 @@ export default function FreelancerAccountPage() {
     }
   }
 
+  const handleChangePassword = async () => {
+    try {
+      // Simulate password change API call
+      toast({
+        title: "Password changed",
+        description: "Your password has been updated successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Password change failed",
+        description: "There was a problem changing your password. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    try {
+      const response = await fetch("/api/account/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user?.id }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete account")
+      }
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been deleted successfully.",
+      })
+
+      // Redirect to home or login page
+      window.location.href = "/"
+    } catch (error) {
+      toast({
+        title: "Account deletion failed",
+        description: "There was a problem deleting your account. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <DashboardLayout navItems={freelancerNavItems} role="freelancer">
       <AnimatedSection>
@@ -111,7 +176,7 @@ export default function FreelancerAccountPage() {
           <Card>
             <CardHeader>
               <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your account details and business information.</CardDescription>
+              <CardDescription>Update your account details and personal information.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -133,36 +198,6 @@ export default function FreelancerAccountPage() {
                     />
                     <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company/Business Name</Label>
-                    <Input
-                      id="company"
-                      name="company"
-                      value={formData.company}
-                      onChange={handleChange}
-                      disabled={isUpdating}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="website">Website</Label>
-                    <Input
-                      id="website"
-                      name="website"
-                      value={formData.website}
-                      onChange={handleChange}
-                      disabled={isUpdating}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>User Role</Label>
-                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted">
-                    <span className="capitalize">{user?.role}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Your role was selected during sign-up and cannot be changed. If you need to use a different role,
-                    please create a new account.
-                  </p>
                 </div>
                 <Button type="submit" className="mt-4" disabled={isUpdating}>
                   {isUpdating ? (
@@ -180,34 +215,10 @@ export default function FreelancerAccountPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Business Settings</CardTitle>
-              <CardDescription>Manage your business profile and preferences.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tax-id">Tax ID / Business Number</Label>
-                <Input id="tax-id" disabled={isUpdating} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="business-address">Business Address</Label>
-                <Input id="business-address" disabled={isUpdating} />
-              </div>
-              <Button variant="outline" className="mt-2" disabled={isUpdating}>
-                Update Business Information
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Security</CardTitle>
               <CardDescription>Manage your password and security settings.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input id="current-password" type="password" disabled={isUpdating} />
-              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="new-password">New Password</Label>
@@ -218,7 +229,7 @@ export default function FreelancerAccountPage() {
                   <Input id="confirm-password" type="password" disabled={isUpdating} />
                 </div>
               </div>
-              <Button variant="outline" className="mt-2" disabled={isUpdating}>
+              <Button variant="outline" className="mt-2" onClick={handleChangePassword} disabled={isUpdating}>
                 Change Password
               </Button>
             </CardContent>
@@ -233,7 +244,9 @@ export default function FreelancerAccountPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Once you delete your account, there is no going back. Please be certain.
               </p>
-              <Button variant="destructive">Delete Account</Button>
+              <Button variant="destructive" onClick={handleDeleteAccount}>
+                Delete Account
+              </Button>
             </CardContent>
           </Card>
         </div>

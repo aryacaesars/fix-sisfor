@@ -80,11 +80,29 @@ export default function StudentAccountPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsUpdating(true)
-
+  
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
+      const response = await fetch("/api/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id,
+          name: formData.name,
+        }),
+      })
+  
+      if (!response.ok) {
+        throw new Error("Failed to update profile")
+      }
+  
+      const updatedUser = await response.json()
+  
+      // Update local state with the updated user data
+      setFormData({
+        ...formData,
+        name: updatedUser.name,
+      })
+  
       toast({
         title: "Profile updated",
         description: "Your profile information has been updated successfully.",

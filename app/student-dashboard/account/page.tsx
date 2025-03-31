@@ -13,6 +13,7 @@ import { Home, BookOpen, LayoutGrid, FileText, Settings, User, Save } from "luci
 import { useRBAC } from "@/hooks/use-rbac"
 import { useAuth } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { Modal } from "@/components/ui/modal"
 
 const studentNavItems = [
   {
@@ -52,6 +53,8 @@ export default function StudentAccountPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [confirmationInput, setConfirmationInput] = useState("")
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -115,6 +118,48 @@ export default function StudentAccountPage() {
       })
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (confirmationInput !== `${user?.name}-${user?.role}`) {
+      toast({
+        title: "Invalid confirmation",
+        description: `Please type "${user?.name}-${user?.role}" to confirm.`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const response = await fetch("/api/account/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user?.id }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete account")
+      }
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been deleted successfully.",
+      })
+
+      // Redirect to home or login page after account deletion
+      window.location.href = "/login"
+    } catch (error) {
+      toast({
+        title: "Deletion failed",
+        description: "There was a problem deleting your account. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
+      setIsModalOpen(false)
+      setConfirmationInput("")
     }
   }
 
@@ -209,9 +254,49 @@ export default function StudentAccountPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Once you delete your account, there is no going back. Please be certain.
               </p>
-              <Button variant="destructive">Delete Account</Button>
+              <Button
+                variant="destructive"
+                onClick={() => setIsModalOpen(true)}
+                disabled={isUpdating}
+              >
+                Delete Account
+              </Button>
             </CardContent>
           </Card>
+
+          {/* Modal for delete confirmation */}
+          {isModalOpen && (
+            <Modal
+              title="Confirm Account Deletion"
+              onClose={() => setIsModalOpen(false)}
+            >
+              <p className="mb-4 text-sm text-muted-foreground">
+                To confirm, please type <strong>{`${user?.name}-${user?.role}`}</strong> below.
+              </p>
+              <Input
+                value={confirmationInput}
+                onChange={(e) => setConfirmationInput(e.target.value)}
+                placeholder="Type your account name-role"
+                disabled={isUpdating}
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={isUpdating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={isUpdating || confirmationInput !== `${user?.name}-${user?.role}`}
+                >
+                  {isUpdating ? "Deleting..." : "Confirm Delete"}
+                </Button>
+              </div>
+            </Modal>
+          )}
         </div>
       </AnimatedSection>
     </DashboardLayout>

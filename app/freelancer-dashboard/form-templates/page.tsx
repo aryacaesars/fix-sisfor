@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -58,128 +58,50 @@ const freelancerNavItems = [
   },
 ]
 
-interface Template {
-  id: string
-  title: string
-  description: string
-  type: string
-  category: "prd" | "srs" | "quotation" | "invoice"
-  googleDocsUrl: string
-}
-
 export default function FreelancerFormTemplatesPage() {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
   const [activeTab, setActiveTab] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    type: "",
+    category: "",
+    link: "",
+  })
+  type Template = {
+    id: string
+    title: string
+    description: string
+    type: string
+    category: string
+    link: string
+  }
+  
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
 
-  const templates: Template[] = [
-    // PRD Templates
-    {
-      id: "1",
-      title: "Web Development PRD",
-      description: "Comprehensive product requirements document template for web development projects.",
-      type: "PRD",
-      category: "prd",
-      googleDocsUrl: "https://docs.google.com/document/d/example1",
-    },
-    {
-      id: "2",
-      title: "Mobile App PRD",
-      description: "Detailed product requirements document for iOS and Android app development.",
-      type: "PRD",
-      category: "prd",
-      googleDocsUrl: "https://docs.google.com/document/d/example2",
-    },
-    {
-      id: "3",
-      title: "E-commerce PRD",
-      description: "Product requirements document template specifically for e-commerce platforms.",
-      type: "PRD",
-      category: "prd",
-      googleDocsUrl: "https://docs.google.com/document/d/example3",
-    },
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch("/api/templates")
+        if (!response.ok) {
+          throw new Error("Failed to fetch templates")
+        }
+        const data = await response.json()
+        setTemplates(data)
+      } catch (error) {
+        console.error("Failed to fetch templates:", error)
+      } finally {
+        setLoadingTemplates(false)
+      }
+    }
 
-    // SRS Templates
-    {
-      id: "4",
-      title: "Web Application SRS",
-      description:
-        "Software requirements specification template for web applications with detailed functional requirements.",
-      type: "SRS",
-      category: "srs",
-      googleDocsUrl: "https://docs.google.com/document/d/example4",
-    },
-    {
-      id: "5",
-      title: "Mobile App SRS",
-      description: "Comprehensive software requirements specification for mobile applications.",
-      type: "SRS",
-      category: "srs",
-      googleDocsUrl: "https://docs.google.com/document/d/example5",
-    },
-    {
-      id: "6",
-      title: "API Development SRS",
-      description: "Software requirements specification template for API development projects.",
-      type: "SRS",
-      category: "srs",
-      googleDocsUrl: "https://docs.google.com/document/d/example6",
-    },
+    fetchTemplates()
+  }, [])
 
-    // Quotation Templates
-    {
-      id: "7",
-      title: "Web Development Quotation",
-      description: "Comprehensive quotation template for web development projects with detailed cost breakdown.",
-      type: "Quotation",
-      category: "quotation",
-      googleDocsUrl: "https://docs.google.com/document/d/example7",
-    },
-    {
-      id: "8",
-      title: "Design Services Quotation",
-      description: "Professional quotation template for graphic design, UI/UX, and branding services.",
-      type: "Quotation",
-      category: "quotation",
-      googleDocsUrl: "https://docs.google.com/document/d/example8",
-    },
-    {
-      id: "9",
-      title: "Fixed Price Project Agreement",
-      description: "Fixed price project quotation and agreement template with milestone payments.",
-      type: "Quotation",
-      category: "quotation",
-      googleDocsUrl: "https://docs.google.com/document/d/example9",
-    },
-
-    // Invoice Templates
-    {
-      id: "10",
-      title: "Standard Invoice",
-      description: "Professional invoice template with standard payment terms and company details.",
-      type: "Invoice",
-      category: "invoice",
-      googleDocsUrl: "https://docs.google.com/document/d/example10",
-    },
-    {
-      id: "11",
-      title: "Detailed Service Invoice",
-      description: "Detailed invoice template with itemized services, hourly rates, and quantity breakdowns.",
-      type: "Invoice",
-      category: "invoice",
-      googleDocsUrl: "https://docs.google.com/document/d/example11",
-    },
-    {
-      id: "12",
-      title: "Retainer Invoice",
-      description: "Monthly retainer invoice template for ongoing client services with recurring payment terms.",
-      type: "Invoice",
-      category: "invoice",
-      googleDocsUrl: "https://docs.google.com/document/d/example12",
-    },
-  ]
-
-  if (isLoading) {
+  if (isLoading || loadingTemplates) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -191,17 +113,15 @@ export default function FreelancerFormTemplatesPage() {
   }
 
   if (!isAuthorized) {
-    return null // The useRBAC hook will handle redirection
+    return null // The useRBAC hook akan menangani redirection
   }
 
   const filteredTemplates = templates.filter((template) => {
-    // Filter by search term
     const matchesSearch =
       template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.type.toLowerCase().includes(searchTerm.toLowerCase())
 
-    // Filter by category tab
     const matchesCategory =
       activeTab === "all" ||
       (activeTab === "prd" && template.category === "prd") ||
@@ -227,12 +147,43 @@ export default function FreelancerFormTemplatesPage() {
     }
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create template")
+      }
+
+      const newTemplate = await response.json()
+      setTemplates((prev) => [newTemplate, ...prev])
+      setIsModalOpen(false)
+      setFormData({ title: "", description: "", type: "", category: "", link: "" })
+    } catch (error) {
+      console.error("Error creating template:", error)
+    }
+  }
+
   return (
     <DashboardLayout navItems={freelancerNavItems} role="freelancer">
       <AnimatedSection>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Form Templates</h1>
-          <Button className="transition-all duration-200 hover:scale-105">
+          <Button
+            className="transition-all duration-200 hover:scale-105"
+            onClick={() => setIsModalOpen(true)}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Template
           </Button>
@@ -279,14 +230,21 @@ export default function FreelancerFormTemplatesPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">{template.description}</p>
               </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" size="sm" className="gap-1">
+              <CardFooter className="flex flex-col items-center gap-2">
+                <Button variant="outline" size="sm" className="gap-1 w-full">
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
-                <Button size="sm" className="gap-1">
+                <Button variant="default" security="outline" size="sm" className="gap-1 w-full">
+                <a
+                  href={template.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm text-secondary w-full justify-center"
+                >
                   <ExternalLink className="h-4 w-4" />
                   Open in Google Docs
+                </a>
                 </Button>
               </CardFooter>
             </Card>
@@ -307,7 +265,58 @@ export default function FreelancerFormTemplatesPage() {
           </div>
         )}
       </AnimatedSection>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Create Template</h2>
+            <div className="space-y-4">
+              <Input
+                name="title"
+                placeholder="Title"
+                value={formData.title}
+                onChange={handleInputChange}
+              />
+              <Input
+                name="description"
+                placeholder="Description"
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+              <Input
+                name="type"
+                placeholder="Type (e.g., document, form)"
+                value={formData.type}
+                onChange={handleInputChange}
+              />
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select Category</option>
+                <option value="prd">PRD</option>
+                <option value="srs">SRS</option>
+                <option value="quotation">Quotation</option>
+                <option value="invoice">Invoice</option>
+              </select>
+              <Input
+                name="link"
+                placeholder="Google Docs Link"
+                value={formData.link}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="flex justify-end mt-4 space-x-2">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit}>Submit</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
-

@@ -175,7 +175,7 @@ model Template {
   description String?
   type        String   // "document", "form", "email", etc.
   category    String   // "academic", "business", "personal", etc.
-  content     String   @db.Text
+  link        String   @db.Text // Properti untuk menyimpan link Google Docs
   userId      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

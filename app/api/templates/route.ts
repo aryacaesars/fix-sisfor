@@ -51,10 +51,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { title, description, type, category, content } = body
+    const { title, description, type, category, link } = body // Ganti content menjadi link
 
-    if (!title || !content) {
-      return NextResponse.json({ error: "Title and content are required" }, { status: 400 })
+    if (!title || !link) {
+      return NextResponse.json({ error: "Title and link are required" }, { status: 400 })
     }
 
     // Create a new template
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         description,
         type: type || "document",
         category: category || "general",
-        content,
+        link, // Simpan link ke database
         userId: session.user.id,
       },
     })

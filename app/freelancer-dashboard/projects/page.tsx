@@ -69,70 +69,7 @@ interface Project {
 export default function FreelancerProjectsPage() {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
 
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: "1",
-      title: "E-commerce Website Redesign",
-      client: "Fashion Boutique Inc.",
-      startDate: "2023-03-01",
-      endDate: "2023-04-30",
-      budget: 5000,
-      status: "active",
-      description:
-        "Complete redesign of the client's e-commerce website with improved UX/UI and mobile responsiveness.",
-    },
-    {
-      id: "2",
-      title: "Mobile App Development",
-      client: "HealthTech Startup",
-      startDate: "2023-02-15",
-      endDate: "2023-05-15",
-      budget: 12000,
-      status: "active",
-      description: "Developing a health tracking mobile application for iOS and Android platforms.",
-    },
-    {
-      id: "3",
-      title: "Brand Identity Design",
-      client: "New Cafe Chain",
-      startDate: "2023-03-20",
-      endDate: "2023-04-15",
-      budget: 3500,
-      status: "active",
-      description:
-        "Creating a complete brand identity including logo, color palette, typography, and brand guidelines.",
-    },
-    {
-      id: "4",
-      title: "Corporate Website Development",
-      client: "Legal Firm LLC",
-      startDate: "2023-01-10",
-      endDate: "2023-03-15",
-      budget: 7500,
-      status: "completed",
-      description: "Development of a professional corporate website with content management system.",
-    },
-    {
-      id: "5",
-      title: "Marketing Campaign Materials",
-      client: "Retail Chain Co.",
-      startDate: "2023-02-01",
-      endDate: "2023-02-28",
-      budget: 2800,
-      status: "completed",
-      description: "Design of digital and print materials for a seasonal marketing campaign.",
-    },
-    {
-      id: "6",
-      title: "Product Catalog Design",
-      client: "Manufacturing Inc.",
-      startDate: "2023-03-05",
-      endDate: "2023-05-20",
-      budget: 4200,
-      status: "on-hold",
-      description: "Design and layout of a comprehensive product catalog for print and digital distribution.",
-    },
-  ])
+  const [projects, setProjects] = useState<Project[]>([]) // Removed dummy data
 
   const [searchTerm, setSearchTerm] = useState("")
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,16 +9,17 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AnimatedSection } from "@/components/animated-section"
 import {
   Home,
-  BookOpen,
-  LayoutGrid,
   FileText,
-  Settings,
-  User,
+  FileCode,
+  Calculator,
   Plus,
   Download,
   ExternalLink,
   Search,
   Filter,
+  Receipt,
+  Settings,
+  User,
 } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
 
@@ -29,18 +30,8 @@ const studentNavItems = [
     icon: <Home className="h-5 w-5" />,
   },
   {
-    title: "Kanban Board",
-    href: "/student-dashboard/kanban",
-    icon: <LayoutGrid className="h-5 w-5" />,
-  },
-  {
-    title: "Assignments",
-    href: "/student-dashboard/assignments",
-    icon: <BookOpen className="h-5 w-5" />,
-  },
-  {
     title: "Form Templates",
-    href: "/student-dashboard/templates",
+    href: "/student-dashboard/form-templates",
     icon: <FileText className="h-5 w-5" />,
   },
   {
@@ -55,130 +46,78 @@ const studentNavItems = [
   },
 ]
 
-interface Template {
-  id: string
-  title: string
-  description: string
-  type: string
-  category: "academic" | "research" | "planning" | "other"
-  googleDocsUrl: string
-}
-
-export default function StudentTemplatesPage() {
+export default function StudentFormTemplatesPage() {
   const { isAuthorized, isLoading } = useRBAC(["student"])
   const [activeTab, setActiveTab] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    type: "",
+    category: "",
+    link: "",
+  })
 
-  const templates: Template[] = [
-    // Academic Templates
-    {
-      id: "1",
-      title: "Lab Report Template",
-      description:
-        "Standard template for science lab reports with sections for hypothesis, materials, procedure, results, and conclusion.",
-      type: "Academic",
-      category: "academic",
-      googleDocsUrl: "https://docs.google.com/document/d/example1",
-    },
-    {
-      id: "2",
-      title: "Essay Outline Template",
-      description:
-        "Structure your essays with this template featuring introduction, body paragraphs, and conclusion sections.",
-      type: "Academic",
-      category: "academic",
-      googleDocsUrl: "https://docs.google.com/document/d/example2",
-    },
-    {
-      id: "3",
-      title: "Math Problem Set Template",
-      description: "Formatted template for solving and presenting mathematical problems and solutions.",
-      type: "Academic",
-      category: "academic",
-      googleDocsUrl: "https://docs.google.com/document/d/example3",
-    },
+  type Template = {
+    id: string
+    title: string
+    description: string
+    type: string
+    category: string
+    link: string
+  }
 
-    // Research Templates
-    {
-      id: "4",
-      title: "Research Paper Format",
-      description: "Academic research paper template with proper citation formatting and section organization.",
-      type: "Research",
-      category: "research",
-      googleDocsUrl: "https://docs.google.com/document/d/example4",
-    },
-    {
-      id: "5",
-      title: "Literature Review Template",
-      description: "Template for organizing and writing literature reviews for research papers.",
-      type: "Research",
-      category: "research",
-      googleDocsUrl: "https://docs.google.com/document/d/example5",
-    },
-    {
-      id: "6",
-      title: "Research Proposal Template",
-      description: "Structured template for creating research proposals with methodology and timeline sections.",
-      type: "Research",
-      category: "research",
-      googleDocsUrl: "https://docs.google.com/document/d/example6",
-    },
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch("/api/templates")
+        if (!response.ok) {
+          throw new Error("Failed to fetch templates")
+        }
+        const data = await response.json()
+        setTemplates(data)
+      } catch (error) {
+        console.error("Failed to fetch templates:", error)
+      } finally {
+        setLoadingTemplates(false)
+      }
+    }
 
-    // Planning Templates
-    {
-      id: "7",
-      title: "Study Schedule Planner",
-      description: "Weekly study schedule template to organize your study sessions and track progress.",
-      type: "Planning",
-      category: "planning",
-      googleDocsUrl: "https://docs.google.com/document/d/example7",
-    },
-    {
-      id: "8",
-      title: "Project Timeline Template",
-      description: "Timeline template for planning and tracking group project milestones and deadlines.",
-      type: "Planning",
-      category: "planning",
-      googleDocsUrl: "https://docs.google.com/document/d/example8",
-    },
-    {
-      id: "9",
-      title: "Semester Planner",
-      description:
-        "Comprehensive semester planning template with course schedules, assignment tracking, and exam dates.",
-      type: "Planning",
-      category: "planning",
-      googleDocsUrl: "https://docs.google.com/document/d/example9",
-    },
+    fetchTemplates()
+  }, [])
 
-    // Other Templates
-    {
-      id: "10",
-      title: "Presentation Slides Template",
-      description: "Clean, academic presentation template with slide layouts for various content types.",
-      type: "Presentation",
-      category: "other",
-      googleDocsUrl: "https://docs.google.com/document/d/example10",
-    },
-    {
-      id: "11",
-      title: "Group Project Proposal",
-      description: "Template for proposing group projects with objectives, timeline, and resource requirements.",
-      type: "Project",
-      category: "other",
-      googleDocsUrl: "https://docs.google.com/document/d/example11",
-    },
-    {
-      id: "12",
-      title: "Peer Review Form",
-      description: "Structured form for conducting peer reviews of academic papers or project contributions.",
-      type: "Assessment",
-      category: "other",
-      googleDocsUrl: "https://docs.google.com/document/d/example12",
-    },
-  ]
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
-  if (isLoading) {
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create template")
+      }
+
+      const newTemplate = await response.json()
+      setTemplates((prev) => [newTemplate, ...prev])
+      setIsModalOpen(false)
+      setFormData({ title: "", description: "", type: "", category: "", link: "" })
+    } catch (error) {
+      console.error("Error creating template:", error)
+    }
+  }
+
+  if (isLoading || loadingTemplates) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -194,29 +133,42 @@ export default function StudentTemplatesPage() {
   }
 
   const filteredTemplates = templates.filter((template) => {
-    // Filter by search term
     const matchesSearch =
       template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       template.type.toLowerCase().includes(searchTerm.toLowerCase())
 
-    // Filter by category tab
     const matchesCategory =
       activeTab === "all" ||
-      (activeTab === "academic" && template.category === "academic") ||
-      (activeTab === "research" && template.category === "research") ||
-      (activeTab === "planning" && template.category === "planning") ||
-      (activeTab === "other" && template.category === "other")
+      (activeTab === "assignment" && template.category === "assignment") ||
+      (activeTab === "notes" && template.category === "notes") ||
+      (activeTab === "project" && template.category === "project")
 
     return matchesSearch && matchesCategory
   })
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "assignment":
+        return <FileText className="h-4 w-4 text-primary" />
+      case "notes":
+        return <FileCode className="h-4 w-4 text-primary" />
+      case "project":
+        return <Calculator className="h-4 w-4 text-primary" />
+      default:
+        return <FileText className="h-4 w-4 text-primary" />
+    }
+  }
 
   return (
     <DashboardLayout navItems={studentNavItems} role="student">
       <AnimatedSection>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Form Templates</h1>
-          <Button className="transition-all duration-200 hover:scale-105">
+          <Button
+            className="transition-all duration-200 hover:scale-105"
+            onClick={() => setIsModalOpen(true)}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Template
           </Button>
@@ -239,12 +191,11 @@ export default function StudentTemplatesPage() {
         </div>
 
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="all">All Templates</TabsTrigger>
-            <TabsTrigger value="academic">Academic</TabsTrigger>
-            <TabsTrigger value="research">Research</TabsTrigger>
-            <TabsTrigger value="planning">Planning</TabsTrigger>
-            <TabsTrigger value="other">Other</TabsTrigger>
+            <TabsTrigger value="assignment">Assignment</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="project">Project</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -253,9 +204,7 @@ export default function StudentTemplatesPage() {
             <Card key={template.id} className="transition-all duration-300 hover:shadow-md">
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-primary/10 p-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                  </div>
+                  <div className="rounded-full bg-primary/10 p-2">{getCategoryIcon(template.category)}</div>
                   <CardTitle className="text-lg">{template.title}</CardTitle>
                 </div>
               </CardHeader>
@@ -265,14 +214,21 @@ export default function StudentTemplatesPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">{template.description}</p>
               </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" size="sm" className="gap-1">
+              <CardFooter className="flex flex-col items-center gap-2">
+                <Button variant="outline" size="sm" className="gap-1 w-full">
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
-                <Button size="sm" className="gap-1">
-                  <ExternalLink className="h-4 w-4" />
-                  Open in Google Docs
+                <Button variant="default" size="sm" className="gap-1 w-full">
+                  <a
+                    href={template.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-secondary w-full justify-center"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open in Google Docs
+                  </a>
                 </Button>
               </CardFooter>
             </Card>
@@ -293,7 +249,57 @@ export default function StudentTemplatesPage() {
           </div>
         )}
       </AnimatedSection>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Create Template</h2>
+            <div className="space-y-4">
+              <Input
+                name="title"
+                placeholder="Title"
+                value={formData.title}
+                onChange={handleInputChange}
+              />
+              <Input
+                name="description"
+                placeholder="Description"
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+              <Input
+                name="type"
+                placeholder="Type (e.g., document, form)"
+                value={formData.type}
+                onChange={handleInputChange}
+              />
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select Category</option>
+                <option value="assignment">Assignment</option>
+                <option value="notes">Notes</option>
+                <option value="project">Project</option>
+              </select>
+              <Input
+                name="link"
+                placeholder="Google Docs Link"
+                value={formData.link}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="flex justify-end mt-4 space-x-2">
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit}>Submit</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
-

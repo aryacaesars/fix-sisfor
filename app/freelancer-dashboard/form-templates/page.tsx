@@ -246,6 +246,7 @@ export default function FreelancerFormTemplatesPage() {
                   Open in Google Docs
                 </a>
                 </Button>
+                
               </CardFooter>
             </Card>
           ))}

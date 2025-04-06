@@ -60,7 +60,10 @@ export function KanbanProvider({ children }: { children: ReactNode }) {
         const storedUsers = localStorage.getItem("kanban-users")
 
         if (storedBoards) {
-          setBoards(JSON.parse(storedBoards))
+          const allBoards = JSON.parse(storedBoards)
+          // Filter boards to only include those created by the current user
+          const userBoards = allBoards.filter((board: KanbanBoard) => board.createdBy === user?.email)
+          setBoards(userBoards)
         }
 
         if (storedUsers) {

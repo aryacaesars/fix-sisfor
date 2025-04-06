@@ -114,10 +114,10 @@ export default function SignupPage() {
       if (result.success) {
         toast({
           title: "Account created successfully",
-          description: `Welcome to Ciao! You're now registered as a ${selectedRole}.`,
+          description: "Please check your email to verify your account before logging in.",
         })
 
-        router.push(selectedRole === "student" ? "/student-dashboard" : "/freelancer-dashboard")
+        router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
       } else {
         setGeneralError(result.message)
         toast({

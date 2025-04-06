@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Layers, ArrowRight, CheckCircle, AlertCircle, BookOpen, Briefcase } from "lucide-react"
+import { Layers, ArrowRight, CheckCircle, AlertCircle, BookOpen, Briefcase, Eye, EyeOff } from "lucide-react" // Tambahkan Eye dan EyeOff
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,6 +31,8 @@ export default function SignupPage() {
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [generalError, setGeneralError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false) // State untuk visibilitas password
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false) // State untuk visibilitas konfirmasi password
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -205,16 +207,26 @@ export default function SignupPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                    className={`transition-all duration-200 ${errors.password ? "border-destructive" : ""}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"} // Ubah tipe input berdasarkan state
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      className={`transition-all duration-200 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)} // Toggle visibilitas password
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-primary"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.password && (
                     <p className="text-xs text-destructive flex items-center mt-1">
                       <AlertCircle className="h-3 w-3 mr-1" />
@@ -240,16 +252,26 @@ export default function SignupPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                    className={`transition-all duration-200 ${errors.confirmPassword ? "border-destructive" : ""}`}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"} // Ubah tipe input berdasarkan state
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      className={`transition-all duration-200 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)} // Toggle visibilitas konfirmasi password
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-primary"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.confirmPassword && (
                     <p className="text-xs text-destructive flex items-center mt-1">
                       <AlertCircle className="h-3 w-3 mr-1" />

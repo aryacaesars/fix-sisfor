@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Layers, ArrowRight, AlertCircle } from "lucide-react"
+import { Layers, ArrowRight, AlertCircle, Eye, EyeOff } from "lucide-react" // Tambahkan Eye dan EyeOff
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,11 +26,11 @@ export default function LoginPage() {
     password: "",
     rememberMe: false,
   })
+  const [showPassword, setShowPassword] = useState(false) // State untuk mengontrol visibilitas password
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
-    // Clear error when user types
     if (error) setError(null)
   }
 
@@ -51,8 +51,6 @@ export default function LoginPage() {
           title: "Login successful",
           description: "Welcome back to Ciao!",
         })
-
-        // The auth context will handle redirection based on role
       } else {
         setError(result.message)
       }
@@ -118,16 +116,26 @@ export default function LoginPage() {
                       Forgot password?
                     </Link>
                   </div>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                    className="transition-all duration-200"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"} // Ubah tipe input berdasarkan state
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      className="transition-all duration-200 pr-10" // Tambahkan padding untuk ikon
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)} // Toggle visibilitas password
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-primary"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox

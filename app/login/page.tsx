@@ -2,9 +2,9 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Layers, ArrowRight, AlertCircle, Eye, EyeOff } from "lucide-react" // Tambahkan Eye dan EyeOff
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,10 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/context/auth-context"
 
 export default function LoginPage() {
+  // Add this at the top of your component function
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const verified = searchParams.get("verified") === "true"
   const { toast } = useToast()
   const { login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
@@ -28,6 +31,16 @@ export default function LoginPage() {
   })
   const [showPassword, setShowPassword] = useState(false) // State untuk mengontrol visibilitas password
 
+  // Add this after your state declarations
+  useEffect(() => {
+    if (verified) {
+      toast({
+        title: "Email verified",
+        description: "Your email has been verified. You can now log in.",
+      })
+    }
+  }, [verified, toast])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -38,6 +51,7 @@ export default function LoginPage() {
     setFormData((prev) => ({ ...prev, rememberMe: checked }))
   }
 
+  // Modify your handleSubmit function to handle verification errors
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -52,7 +66,19 @@ export default function LoginPage() {
           description: "Welcome back to Ciao!",
         })
       } else {
-        setError(result.message)
+        // Check if the error is about email verification
+        if (result.message.includes("verify your email")) {
+          setError("Please verify your email before logging in")
+          toast({
+            title: "Verification required",
+            description: "Please check your email for a verification link or request a new one.",
+            variant: "destructive",
+          })
+          // Redirect to verification page
+          router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
+        } else {
+          setError(result.message)
+        }
       }
     } catch (error) {
       setError("An unexpected error occurred. Please try again.")

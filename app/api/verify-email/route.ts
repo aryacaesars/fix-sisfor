@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     })
 
     // Redirect ke halaman login dengan pesan sukses
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/login?verified=true`)
+    return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/auth/login?verified=true`)
   } catch (error) {
     console.error("Error verifying email:", error)
     return NextResponse.json({ error: "Terjadi kesalahan saat verifikasi email" }, { status: 500 })

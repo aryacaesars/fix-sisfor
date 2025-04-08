@@ -35,7 +35,7 @@ router.post("/send-verification-email", async (req, res) => {
       create: { identifier: email, token, expires },
     })
 
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`
+    const verificationUrl = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}`
 
     // Konfigurasi transporter Nodemailer
     const transporter = nodemailer.createTransport({

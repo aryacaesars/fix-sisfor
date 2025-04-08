@@ -72,7 +72,7 @@ export function Navbar({ navItems = [] }: NavbarProps) {
           <ThemeToggle />
           <div className="hidden md:flex items-center space-x-4">
             <Link
-              href="/login"
+              href="/auth/login"
               className="text-sm font-medium px-2 py-2 hover:text-primary transition-colors duration-200"
             >
               Log in

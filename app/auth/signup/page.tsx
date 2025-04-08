@@ -117,7 +117,7 @@ export default function SignupPage() {
           description: "Please check your email to verify your account before logging in.",
         })
 
-        router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
+        router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`)
       } else {
         setGeneralError(result.message)
         toast({

@@ -3,6 +3,22 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { signIn, signOut, useSession } from "next-auth/react"
+import { Session as NextAuthSession } from "next-auth"
+
+// Remove the recursive reference in the Session type
+// Ensure the email property aligns with the expected type
+declare module "next-auth" {
+  interface User {
+    id: string;
+    email?: string;
+    name?: string | null;
+    role?: string | null;
+    image?: string | null;
+  }
+  interface Session {
+    user: User;
+  }
+}
 
 interface AuthContextType {
   user: {
@@ -101,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check if user is authorized for specific roles
   const isAuthorized = (allowedRoles: string[]) => {
+    console.log("User role:", session?.user?.role)
     if (!session?.user?.role) return false
     return allowedRoles.includes(session.user.role)
   }
@@ -153,17 +170,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
 
       if (isProtectedRoute && sessionStatus !== "authenticated") {
-        router.push("/login")
+        router.push("auth/login")
       }
 
       // Redirect from role selection if not authenticated
       if (pathname === "/role-selection" && sessionStatus !== "authenticated") {
-        router.push("/login")
+        router.push("auth/login")
       }
 
       // Redirect from login/signup if already authenticated
       if (
-        (pathname === "/login" || pathname === "/signup") &&
+        (pathname === "auth/login" || pathname === "/signup") &&
         sessionStatus === "authenticated" &&
         session?.user?.role
       ) {
@@ -171,6 +188,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [pathname, router, sessionStatus, session])
+
+  // Replace nextCookies with document.cookie
+  useEffect(() => {
+    if (sessionStatus === "authenticated" && session?.user) {
+      const cookies = document.cookie.split("; ").reduce((acc, cookie) => {
+        const [key, value] = cookie.split("=")
+        acc[key] = value
+        return acc
+      }, {} as Record<string, string>)
+
+      const userRole = cookies["user-role"]
+
+      if (userRole) {
+        session.user.role = userRole
+      }
+    }
+  }, [sessionStatus, session])
 
   return (
     <AuthContext.Provider
@@ -180,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         status: sessionStatus,
         login,
         signUp,
-        signOut: () => signOut({ callbackUrl: "/login" }),
+        signOut: () => signOut({ callbackUrl: "/auth/login" }),
         isAuthorized,
         setUserRole,
       }}

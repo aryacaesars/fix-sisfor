@@ -40,7 +40,7 @@ export default function VerifyEmailPage() {
 
             // Redirect ke halaman login setelah beberapa detik
             setTimeout(() => {
-              router.push("/login?verified=true")
+              router.push("/auth/login?verified=true")
             }, 3000)
           } else {
             const data = await response.json()
@@ -56,6 +56,7 @@ export default function VerifyEmailPage() {
             variant: "destructive",
           })
         })
+        
     }
   }, [searchParams, router, toast])
 
@@ -163,7 +164,7 @@ export default function VerifyEmailPage() {
               </Button>
             </form>
             <div className="mt-6 text-center text-sm">
-              <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+              <Link href="/auth/login" className="font-medium text-primary underline-offset-4 hover:underline">
                 Back to login
               </Link>
             </div>

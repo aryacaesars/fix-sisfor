@@ -21,7 +21,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const verified = searchParams.get("verified") === "true"
   const { toast } = useToast()
-  const { login } = useAuth()
+  const { login, user, isCheckingAuth } = useAuth() // Add `user` and `isCheckingAuth` here
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -30,6 +30,16 @@ export default function LoginPage() {
     rememberMe: false,
   })
   const [showPassword, setShowPassword] = useState(false) // State untuk mengontrol visibilitas password
+
+  useEffect(() => {
+    if (user?.role && !isCheckingAuth) {
+      toast({
+        title: "Role already selected",
+        description: `You already have the ${user.role} role.`,
+      })
+      router.push(user.role === "student" ? "/student-dashboard" : "/freelancer-dashboard")
+    }
+  }, [user, router, toast, isCheckingAuth])
 
   // Add this after your state declarations
   useEffect(() => {
@@ -64,7 +74,20 @@ export default function LoginPage() {
         toast({
           title: "Login successful",
           description: "Welcome back to Ciao!",
-        })
+        });
+
+        // Get user role from the login result
+        const userRole = result.role; // Assuming the role is returned in the result
+
+        // Redirect to the appropriate dashboard based on role
+        if (userRole === "student") {
+          router.push("/student-dashboard");
+        } else if (userRole === "freelancer") {
+          router.push("/freelancer-dashboard");
+        } else {
+          // Handle unknown roles or redirect to a default page
+          router.push("/unauthorized");
+        }
       } else {
         // Check if the error is about email verification
         if (result.message.includes("verify your email")) {
@@ -186,7 +209,7 @@ export default function LoginPage() {
             </form>
             <div className="mt-6 text-center text-sm">
               Don&apos;t have an account?{" "}
-              <Link href="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
+              <Link href="/auth/signup" className="font-medium text-primary underline-offset-4 hover:underline">
                 Sign up
               </Link>
             </div>

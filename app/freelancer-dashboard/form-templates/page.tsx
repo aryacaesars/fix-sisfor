@@ -1,16 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AnimatedSection } from "@/components/animated-section"
 import {
-  Home,
-  Briefcase,
-  LayoutGrid,
   FileText,
   FileCode,
   Calculator,
@@ -20,43 +16,8 @@ import {
   Search,
   Filter,
   Receipt,
-  Settings,
-  User,
 } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
-
-const freelancerNavItems = [
-  {
-    title: "Home",
-    href: "/freelancer-dashboard",
-    icon: <Home className="h-5 w-5" />,
-  },
-  {
-    title: "Kanban Board",
-    href: "/freelancer-dashboard/kanban",
-    icon: <LayoutGrid className="h-5 w-5" />,
-  },
-  {
-    title: "Projects",
-    href: "/freelancer-dashboard/projects",
-    icon: <Briefcase className="h-5 w-5" />,
-  },
-  {
-    title: "Form Templates",
-    href: "/freelancer-dashboard/form-templates",
-    icon: <FileText className="h-5 w-5" />,
-  },
-  {
-    title: "Settings",
-    href: "/freelancer-dashboard/settings",
-    icon: <Settings className="h-5 w-5" />,
-  },
-  {
-    title: "Account",
-    href: "/freelancer-dashboard/account",
-    icon: <User className="h-5 w-5" />,
-  },
-]
 
 export default function FreelancerFormTemplatesPage() {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
@@ -176,66 +137,65 @@ export default function FreelancerFormTemplatesPage() {
   }
 
   return (
-    <DashboardLayout navItems={freelancerNavItems} role="freelancer">
-      <AnimatedSection>
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Form Templates</h1>
-          <Button
-            className="transition-all duration-200 hover:scale-105"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Template
-          </Button>
+    <AnimatedSection>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Form Templates</h1>
+        <Button
+          className="transition-all duration-200 hover:scale-105"
+          onClick={() => setIsModalOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Template
+        </Button>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search templates..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
+        <Button variant="outline" className="flex gap-2">
+          <Filter className="h-4 w-4" />
+          Filter
+        </Button>
+      </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search templates..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" className="flex gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-        </div>
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid grid-cols-5 w-full">
+          <TabsTrigger value="all">All Templates</TabsTrigger>
+          <TabsTrigger value="prd">PRD</TabsTrigger>
+          <TabsTrigger value="srs">SRS</TabsTrigger>
+          <TabsTrigger value="quotation">Quotation</TabsTrigger>
+          <TabsTrigger value="invoice">Invoice</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-5 w-full">
-            <TabsTrigger value="all">All Templates</TabsTrigger>
-            <TabsTrigger value="prd">PRD</TabsTrigger>
-            <TabsTrigger value="srs">SRS</TabsTrigger>
-            <TabsTrigger value="quotation">Quotation</TabsTrigger>
-            <TabsTrigger value="invoice">Invoice</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTemplates.map((template) => (
-            <Card key={template.id} className="transition-all duration-300 hover:shadow-md">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-primary/10 p-2">{getCategoryIcon(template.category)}</div>
-                  <CardTitle className="text-lg">{template.title}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-2">
-                  <span className="inline-block px-2 py-1 text-xs rounded-full bg-muted">{template.type}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{template.description}</p>
-              </CardContent>
-              <CardFooter className="flex flex-col items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1 w-full">
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
-                <Button variant="default" security="outline" size="sm" className="gap-1 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredTemplates.map((template) => (
+          <Card key={template.id} className="transition-all duration-300 hover:shadow-md">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <div className="rounded-full bg-primary/10 p-2">{getCategoryIcon(template.category)}</div>
+                <CardTitle className="text-lg">{template.title}</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-2">
+                <span className="inline-block px-2 py-1 text-xs rounded-full bg-muted">{template.type}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">{template.description}</p>
+            </CardContent>
+            <CardFooter className="flex flex-col items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1 w-full">
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+              <Button variant="default" size="sm" className="gap-1 w-full">
                 <a
                   href={template.link}
                   target="_blank"
@@ -245,27 +205,25 @@ export default function FreelancerFormTemplatesPage() {
                   <ExternalLink className="h-4 w-4" />
                   Open in Google Docs
                 </a>
-                </Button>
-                
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
 
-        {filteredTemplates.length === 0 && (
-          <div className="text-center py-12">
-            <div className="rounded-full bg-muted w-12 h-12 flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">No templates found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm
-                ? `No templates match "${searchTerm}". Try a different search term.`
-                : "No templates available in this category."}
-            </p>
+      {filteredTemplates.length === 0 && (
+        <div className="text-center py-12">
+          <div className="rounded-full bg-muted w-12 h-12 flex items-center justify-center mx-auto mb-4">
+            <FileText className="h-6 w-6 text-muted-foreground" />
           </div>
-        )}
-      </AnimatedSection>
+          <h3 className="text-lg font-medium mb-2">No templates found</h3>
+          <p className="text-muted-foreground">
+            {searchTerm
+              ? `No templates match "${searchTerm}". Try a different search term.`
+              : "No templates available in this category."}
+          </p>
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -318,6 +276,6 @@ export default function FreelancerFormTemplatesPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </AnimatedSection>
   )
 }

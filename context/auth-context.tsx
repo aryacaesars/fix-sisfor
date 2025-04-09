@@ -30,7 +30,8 @@ interface AuthContextType {
   } | null
   isAuthenticated: boolean
   status: "loading" | "authenticated" | "unauthenticated"
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>
+  isCheckingAuth: boolean // Add this property
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string; role?: string | null }>
   signUp: (
     email: string,
     password: string,
@@ -65,9 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Include the user's role in the return value
+      const userRole = session?.user?.role || null
+
       return {
         success: true,
         message: "Login successful",
+        role: userRole, // Add the role here
       }
     } catch (error) {
       console.error("Login error:", error)
@@ -212,6 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user || null,
         isAuthenticated: sessionStatus === "authenticated",
         status: sessionStatus,
+        isCheckingAuth: sessionStatus === "loading", // Add this line
         login,
         signUp,
         signOut: () => signOut({ callbackUrl: "/auth/login" }),

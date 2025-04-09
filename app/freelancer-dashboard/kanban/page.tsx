@@ -1,49 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { KanbanProvider } from "@/context/kanban-context"
 import { KanbanBoard } from "@/components/kanban/kanban-board"
 import { BoardSelector } from "@/components/kanban/board-selector"
 import { useRBAC } from "@/hooks/use-rbac"
-import { Home, Briefcase, LayoutGrid, FileText, Settings, User } from "lucide-react"
+import { Settings } from "lucide-react"
 import { AnimatedSection } from "@/components/animated-section"
 import { Button } from "@/components/ui/button"
 import { BoardSettings } from "@/components/kanban/board-settings"
 import { useKanban } from "@/context/kanban-context"
-
-const freelancerNavItems = [
-  {
-    title: "Home",
-    href: "/freelancer-dashboard",
-    icon: <Home className="h-5 w-5" />,
-  },
-  {
-    title: "Kanban Board",
-    href: "/freelancer-dashboard/kanban",
-    icon: <LayoutGrid className="h-5 w-5" />,
-  },
-  {
-    title: "Projects",
-    href: "/freelancer-dashboard/projects",
-    icon: <Briefcase className="h-5 w-5" />,
-  },
-  {
-    title: "Form Templates",
-    href: "/freelancer-dashboard/form-templates",
-    icon: <FileText className="h-5 w-5" />,
-  },
-  {
-    title: "Settings",
-    href: "/freelancer-dashboard/settings",
-    icon: <Settings className="h-5 w-5" />,
-  },
-  {
-    title: "Account",
-    href: "/freelancer-dashboard/account",
-    icon: <User className="h-5 w-5" />,
-  },
-]
 
 // Wrapper component to access Kanban context
 function KanbanBoardWithSettings() {
@@ -98,12 +64,10 @@ export default function FreelancerKanbanPage() {
   }
 
   return (
-    <DashboardLayout navItems={freelancerNavItems} role="freelancer">
-      <AnimatedSection className="h-full">
-        <KanbanProvider>
-          <KanbanBoardWithSettings />
-        </KanbanProvider>
-      </AnimatedSection>
-    </DashboardLayout>
+    <AnimatedSection className="h-full">
+      <KanbanProvider>
+        <KanbanBoardWithSettings />
+      </KanbanProvider>
+    </AnimatedSection>
   )
 }

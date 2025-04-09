@@ -42,7 +42,7 @@ const freelancerNavItems = [
 ]
 
 export default function FreelancerDashboard() {
-  const { isAuthorized, isLoading, role } = useRBAC(["freelancer"])
+  const { isAuthorized, isLoading } = useRBAC(["freelancer"])
   const router = useRouter()
 
   useEffect(() => {
@@ -69,7 +69,6 @@ export default function FreelancerDashboard() {
   }
 
   return (
-    <DashboardLayout navItems={freelancerNavItems} role="freelancer">
       <AnimatedSection>
         <h1 className="text-3xl font-bold mb-6">Freelancer Dashboard</h1>
 
@@ -222,7 +221,6 @@ export default function FreelancerDashboard() {
           </Card>
         </div>
       </AnimatedSection>
-    </DashboardLayout>
   )
 }
 

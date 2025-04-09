@@ -33,10 +33,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user?.role && !isCheckingAuth) {
-      toast({
-        title: "Role already selected",
-        description: `You already have the ${user.role} role.`,
-      })
       router.push(user.role === "student" ? "/student-dashboard" : "/freelancer-dashboard")
     }
   }, [user, router, toast, isCheckingAuth])
@@ -79,15 +75,6 @@ export default function LoginPage() {
         // Get user role from the login result
         const userRole = result.role; // Assuming the role is returned in the result
 
-        // Redirect to the appropriate dashboard based on role
-        if (userRole === "student") {
-          router.push("/student-dashboard");
-        } else if (userRole === "freelancer") {
-          router.push("/freelancer-dashboard");
-        } else {
-          // Handle unknown roles or redirect to a default page
-          router.push("/unauthorized");
-        }
       } else {
         // Check if the error is about email verification
         if (result.message.includes("verify your email")) {

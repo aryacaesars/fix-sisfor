@@ -111,7 +111,9 @@ export function Navbar({ navItems = [] }: NavbarProps) {
             </nav>
             <div className="flex flex-col space-y-3 pt-3 border-t">
               <Link
+
                 href="/auth/login"
+
                 className="text-sm font-medium py-2 hover:text-primary transition-colors duration-200"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

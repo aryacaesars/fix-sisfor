@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, FormEvent } from "react"
+import { useState, FormEvent, useEffect } from "react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,12 +42,51 @@ export default function FreelancerProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   
+  // Fetch projects from the API
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch("/api/projects", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch projects")
+      }
+  
+      const data = await response.json()
+  
+      // Periksa apakah data adalah array
+      if (Array.isArray(data)) {
+        setProjects(data) // Data langsung berupa array proyek
+      } else {
+        console.error("Invalid data format:", data)
+        setProjects([]) // Fallback ke array kosong jika format data salah
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+      setProjects([]) // Fallback ke array kosong jika terjadi error
+      toast({
+        title: "Error loading projects",
+        description: "Failed to load projects. Please try again later.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Load projects when the component mounts
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
   // Form state for new project
   const [newProject, setNewProject] = useState({
     title: "",
     description: "",
     client: "",
-    startDate: "", // Add the missing startDate field
+    startDate: "",
     endDate: "",
     budget: "",
     status: "active" as const,
@@ -67,7 +106,7 @@ export default function FreelancerProjectsPage() {
 
   // Create project and Kanban board
   const handleCreateProject = async (e: FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     try {
       const response = await fetch("/api/projects", {
@@ -85,17 +124,17 @@ export default function FreelancerProjectsPage() {
           status: newProject.status,
           assignedTo: newProject.assignedTo,
         }),
-      });
+      })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to create project");
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Failed to create project")
       }
 
-      const { project } = await response.json();
+      const { project } = await response.json()
 
       // Update state with new project, including kanbanBoardId
-      setProjects([...projects, project]);
+      setProjects((prevProjects) => (Array.isArray(prevProjects) ? [...prevProjects, project] : [project]))
 
       // Reset form and close modal
       setNewProject({
@@ -107,20 +146,20 @@ export default function FreelancerProjectsPage() {
         budget: "",
         status: "active" as const,
         assignedTo: "",
-      });
-      setIsModalOpen(false);
+      })
+      setIsModalOpen(false)
 
       toast({
         title: "Project created successfully",
         description: "A Kanban board has been created to track this project's progress.",
-      });
+      })
     } catch (error) {
-      console.error("Error creating project:", error);
+      console.error("Error creating project:", error)
       toast({
         title: "Error creating project",
         description: "Please try again later",
         variant: "destructive",
-      });
+      })
     }
   }
 
@@ -139,7 +178,7 @@ export default function FreelancerProjectsPage() {
     return null // The useRBAC hook will handle redirection
   }
 
-  const filteredProjects = projects.filter(
+  const filteredProjects = (projects || []).filter(
     (project) =>
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.client.toLowerCase().includes(searchTerm.toLowerCase()),

@@ -14,7 +14,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const boardId = params.boardId;
+    // Fix: Extract boardId after awaiting params
+    const { boardId } = params;
 
     // Fetch the board
     const board = await prisma.kanbanBoard.findUnique({

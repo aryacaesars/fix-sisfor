@@ -393,12 +393,22 @@ export default function FreelancerProjectsPage() {
                 Details
               </Button>
               <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`}
-              >
-                View Kanban
-              </Button>
+  variant="secondary" 
+  size="sm" 
+  onClick={() => {
+    if (project.kanbanBoardId) {
+      window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
+    } else {
+      toast({
+        title: "No Kanban board",
+        description: "This project doesn't have a Kanban board associated with it.",
+        variant: "destructive",
+      });
+    }
+  }}
+>
+  View Kanban
+</Button>
               <Button size="sm">Manage</Button>
             </CardFooter>
           </Card>

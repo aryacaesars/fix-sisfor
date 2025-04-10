@@ -54,16 +54,20 @@ export default function KanbanDashboardPage() {
       const response = await fetch("/api/kanban/boards")
       
       if (!response.ok) {
-        throw new Error("Failed to fetch Kanban boards")
+        const errorText = await response.text();
+        console.error("Server response:", errorText);
+        throw new Error(`Failed to fetch Kanban boards: ${response.status}`)
       }
       
       const data = await response.json()
-      setProjectBoards(data)
+      console.log("Fetched boards:", data);
+      setProjectBoards(data || [])
       
       // Set recent boards (last 5 accessed)
-      const recent = [...data].sort((a, b) => 
+      const recent = Array.isArray(data) ? [...data].sort((a, b) => 
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      ).slice(0, 5)
+      ).slice(0, 5) : [];
+      
       setRecentBoards(recent)
       setIsLoaded(true)
     } catch (error) {
@@ -74,6 +78,8 @@ export default function KanbanDashboardPage() {
         variant: "destructive"
       })
       setIsLoaded(true)
+      setProjectBoards([])
+      setRecentBoards([])
     }
   }
   
@@ -114,7 +120,7 @@ export default function KanbanDashboardPage() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "active":
         return "bg-green-500 text-white"
       case "completed":
@@ -146,7 +152,7 @@ export default function KanbanDashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Project Kanban Boards</h1>
         <Link href="/freelancer-dashboard/projects">
-          <Button variant="outline" className="mr-2">Back to Projects</Button>
+          <Button variant="outline">Back to Projects</Button>
         </Link>
       </div>
       
@@ -271,10 +277,14 @@ export default function KanbanDashboardPage() {
                   <CardContent className="p-4 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-2">
                       <Kanban className="h-4 w-4 text-primary" />
-                      <Badge className={`text-xs ${getStatusColor(board.project.status)}`}>{board.project.status}</Badge>
+                      <Badge className={`text-xs ${getStatusColor(board.project.status)}`}>
+                        {board.project.status || "Active"}
+                      </Badge>
                     </div>
                     <h3 className="font-medium truncate">{board.project.title}</h3>
-                    <p className="text-xs text-muted-foreground truncate mt-1 mb-auto">{board.project.clientName || 'No client'}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-1 mb-auto">
+                      {board.project.clientName || 'No client'}
+                    </p>
                     <div className="flex items-center justify-between mt-3 text-xs">
                       <span className="text-muted-foreground">{getRelativeTime(board.updatedAt)}</span>
                       <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,26 +8,26 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
+  id             String         @id @default(cuid())
   name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
+  email          String?        @unique
   image          String?
   hashedPassword String?
-  role           String?   // "student" or "freelancer"
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-
+  role           String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  emailVerified  DateTime?
   accounts       Account[]
-  sessions       Session[]
+  assignments    Assignment[]
+  Attachment     Attachment[]
+  boardMembers   BoardMember[]
+  comments       Comment[]
   boards         KanbanBoard[]
   tasks          KanbanTask[]
   projects       Project[]
+  sessions       Session[]
+  TaskAssignee   TaskAssignee[]
   templates      Template[]
-  assignments    Assignment[]
-  boardMembers   BoardMember[]
-  comments       Comment[]
 }
 
 model Account {
@@ -39,15 +36,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -69,122 +65,111 @@ model VerificationToken {
 }
 
 model KanbanBoard {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   description String?
   createdById String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  createdBy   User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  columns     KanbanColumn[]
-  projects    Project[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   members     BoardMember[]
+  createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  columns     KanbanColumn[]
 }
 
 model BoardMember {
-  id        String   @id @default(cuid())
-  boardId   String
-  userId    String
-  role      String   // "admin", "editor", "viewer"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  board     KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id      String      @id @default(cuid())
+  boardId String
+  userId  String
+  role    String
+  board   KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([boardId, userId])
 }
 
 model KanbanColumn {
-  id        String   @id @default(cuid())
-  title     String
-  boardId   String
-  order     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id      String       @id @default(cuid())
+  title   String
+  boardId String
+  order   Int
+  board   KanbanBoard  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks   KanbanTask[]
 
-  board     KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  tasks     KanbanTask[]
+  @@unique([boardId, order])
 }
 
 model KanbanTask {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  columnId    String
-  priority    String?   // "low", "medium", "high"
-  dueDate     DateTime?
-  assignedToId String?
-  createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  column      KanbanColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  comments    Comment[]
-  attachments Attachment[]
+  id           String         @id @default(cuid())
+  title        String
+  description  String?
+  columnId     String
+  priority     String         @default("medium")
+  dueDate      DateTime?
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  labels       String[]
+  attachments  Attachment[]
+  comments     Comment[]
+  column       KanbanColumn   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  createdBy    User           @relation(fields: [createdById], references: [id])
+  TaskAssignee TaskAssignee[]
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   content   String
   taskId    String
   userId    String
   parentId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  parent    Comment?   @relation("CommentToComment", fields: [parentId], references: [id])
+  replies   Comment[]  @relation("CommentToComment")
   task      KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent    Comment?   @relation("CommentToComment", fields: [parentId], references: [id], onDelete: SetNull)
-  replies   Comment[]  @relation("CommentToComment")
 }
 
 model Attachment {
-  id        String   @id @default(cuid())
-  name      String
-  url       String
-  type      String
-  size      Int
-  taskId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  task      KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  name       String
+  url        String
+  type       String
+  size       Int
+  taskId     String
+  uploadedAt DateTime   @default(now())
+  userId     String
+  task       KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Project {
-  id            String       @id @default(cuid())
+  id            String   @id @default(cuid())
   title         String
   description   String?
-  clientName    String?
-  status        String       // "active", "completed", "on-hold"
-  budget        Decimal?     @db.Decimal(10, 2)
-  startDate     DateTime?
-  endDate       DateTime?
-  assignedTo    String?      // Add this new field
+  clientName    String
+  status        String   @default("active")
+  budget        Float
+  startDate     DateTime
+  endDate       DateTime
   userId        String
-  kanbanBoardId String?      @unique
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  
-  // Relations
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kanbanBoard   KanbanBoard? @relation(fields: [kanbanBoardId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  kanbanBoardId String?
+  assignedTo    String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Template {
   id          String   @id @default(cuid())
   title       String
   description String?
-  type        String   // "document", "form", "email", etc.
-  category    String   // "academic", "business", "personal", etc.
-  link        String   @db.Text // Properti untuk menyimpan link Google Docs
+  type        String
+  category    String
   userId      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
+  link        String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -193,12 +178,20 @@ model Assignment {
   title       String
   description String?
   course      String?
-  status      String    // "not-started", "in-progress", "completed", "late"
+  status      String    @default("not-started")
   dueDate     DateTime?
   userId      String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model TaskAssignee {
+  id         String     @id
+  taskId     String
+  userId     String
+  KanbanTask KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+}

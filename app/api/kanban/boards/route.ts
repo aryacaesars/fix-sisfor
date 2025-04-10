@@ -17,19 +17,36 @@ export async function GET() {
         userId: session.user.id,
         kanbanBoardId: { not: null }
       },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        clientName: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        kanbanBoardId: true,
+        createdAt: true,
+        updatedAt: true
+      },
       orderBy: { updatedAt: "desc" }
     });
 
     // Then, fetch the corresponding boards
-    const boardIds = projects.map(project => project.kanbanBoardId).filter(Boolean);
+    const boardIds = projects
+      .map(project => project.kanbanBoardId)
+      .filter(Boolean) as string[];
     
-    const boards = await prisma.kanbanBoard.findMany({
-      where: {
-        id: { in: boardIds as string[] }
-      }
-    });
+    let boards: any[] = [];
+    if (boardIds.length > 0) {
+      boards = await prisma.kanbanBoard.findMany({
+        where: {
+          id: { in: boardIds }
+        }
+      });
+    }
 
-    // Match boards with projects
+    // Match boards with projects and create a combined structure
     const projectBoards = projects.map(project => {
       const board = boards.find(board => board.id === project.kanbanBoardId);
       

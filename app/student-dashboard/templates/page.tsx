@@ -28,13 +28,8 @@ type Template = {
   link: string
 }
 
-export default function StudentFormTemplatesPage() {
-  const { isAuthorized, isLoading } = useRBAC(["student"])
-  const [activeTab, setActiveTab] = useState<string>("all")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [loadingTemplates, setLoadingTemplates] = useState(true)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+// Move Modal to a separate component
+const TemplateFormModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -42,10 +37,90 @@ export default function StudentFormTemplatesPage() {
     category: "",
     link: "",
   })
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = () => {
+    onSubmit(formData)
+    setFormData({
+      title: "",
+      description: "",
+      type: "",
+      category: "",
+      link: "",
+    })
+  }
+
+  if (!isOpen) return null
+  
+  return createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h2 className="text-xl font-bold mb-4">Create Template</h2>
+        <div className="space-y-4">
+          <Input
+            name="title"
+            placeholder="Title"
+            value={formData.title}
+            onChange={handleInputChange}
+          />
+          <Input
+            name="description"
+            placeholder="Description"
+            value={formData.description}
+            onChange={handleInputChange}
+          />
+          <Input
+            name="type"
+            placeholder="Type (e.g., document, form)"
+            value={formData.type}
+            onChange={handleInputChange}
+          />
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleInputChange}
+            className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+          >
+            <option value="">Select Category</option>
+            <option value="assignment">Assignment</option>
+            <option value="notes">Notes</option>
+            <option value="project">Project</option>
+          </select>
+          <Input
+            name="link"
+            placeholder="Google Docs Link"
+            value={formData.link}
+            onChange={handleInputChange}
+          />
+        </div>
+        <div className="flex justify-end mt-4 space-x-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>Submit</Button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+export default function StudentFormTemplatesPage() {
+  const { isAuthorized, isLoading } = useRBAC(["student"])
+  const [activeTab, setActiveTab] = useState<string>("all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true) // For portal to work safely in Next.js
+    setIsMounted(true)
+    
     const fetchTemplates = async () => {
       try {
         const response = await fetch("/api/templates")
@@ -62,10 +137,13 @@ export default function StudentFormTemplatesPage() {
     }
 
     fetchTemplates()
+  }, [])
 
-    // Set overflow hidden on body when modal is open
+  useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
     }
     
     return () => {
@@ -73,12 +151,7 @@ export default function StudentFormTemplatesPage() {
     }
   }, [isModalOpen])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSubmit = async () => {
+  const handleModalSubmit = async (formData) => {
     try {
       const response = await fetch("/api/templates", {
         method: "POST",
@@ -95,7 +168,6 @@ export default function StudentFormTemplatesPage() {
       const newTemplate = await response.json()
       setTemplates((prev) => [newTemplate, ...prev])
       setIsModalOpen(false)
-      setFormData({ title: "", description: "", type: "", category: "", link: "" })
     } catch (error) {
       console.error("Error creating template:", error)
     }
@@ -144,63 +216,6 @@ export default function StudentFormTemplatesPage() {
     }
   }
 
-  // Modal component
-  const Modal = () => {
-    if (!isMounted) return null
-    
-    return createPortal(
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
-          <h2 className="text-xl font-bold mb-4">Create Template</h2>
-          <div className="space-y-4">
-            <Input
-              name="title"
-              placeholder="Title"
-              value={formData.title}
-              onChange={handleInputChange}
-            />
-            <Input
-              name="description"
-              placeholder="Description"
-              value={formData.description}
-              onChange={handleInputChange}
-            />
-            <Input
-              name="type"
-              placeholder="Type (e.g., document, form)"
-              value={formData.type}
-              onChange={handleInputChange}
-            />
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-            >
-              <option value="">Select Category</option>
-              <option value="assignment">Assignment</option>
-              <option value="notes">Notes</option>
-              <option value="project">Project</option>
-            </select>
-            <Input
-              name="link"
-              placeholder="Google Docs Link"
-              value={formData.link}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="flex justify-end mt-4 space-x-2">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>Submit</Button>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )
-  }
-
   return (
     <AnimatedSection>
       <div className="flex justify-between items-center mb-6">
@@ -241,7 +256,18 @@ export default function StudentFormTemplatesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTemplates.map((template) => (
-          <Card key={template.id} className="transition-all duration-300 hover:shadow-md">
+          <Card 
+            key={template.id} 
+            className="transition-all duration-300 hover:shadow-md cursor-pointer hover:scale-[1.01]"
+            onClick={(e) => {
+              e.preventDefault();
+              // Ensure the link has a protocol prefix
+              if (template.link) {
+                const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }
+            }}
+          >
             <CardHeader>
               <div className="flex items-center gap-2">
                 <div className="rounded-full bg-primary/10 p-2">{getCategoryIcon(template.category)}</div>
@@ -265,9 +291,16 @@ export default function StudentFormTemplatesPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-sm text-secondary w-full justify-center"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (template.link) {
+                      const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Open in Google Docs
+                  Open Template
                 </a>
               </Button>
             </CardFooter>
@@ -289,7 +322,13 @@ export default function StudentFormTemplatesPage() {
         </div>
       )}
 
-      {isModalOpen && <Modal />}
+      {isMounted && (
+        <TemplateFormModal 
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleModalSubmit}
+        />
+      )}
     </AnimatedSection>
   )
 }

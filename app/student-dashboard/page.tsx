@@ -2,7 +2,7 @@
 
 import { 
   Home, BookOpen, LayoutGrid, FileText, Settings, User, 
-  Calendar, ArrowRight, ExternalLink, X, Info, AlertCircle 
+  Calendar, ArrowRight, ExternalLink, X, Info, AlertCircle, FileCode, Calculator 
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { AnimatedSection } from "@/components/animated-section"
@@ -381,8 +381,13 @@ const DeadlineCalendar = ({ assignments = [], router, boardId }) => {
               )}
               
               <div className="flex justify-end mt-4">
-                <Link href={`/assignments/${selectedAssignment.id}`}>
-                  <Button variant="outline" className="mr-2">View Full Details</Button>
+                <Link href={selectedAssignment.kanbanBoardId ? 
+                  `/student-dashboard/kanban/${selectedAssignment.kanbanBoardId}` : 
+                  `/student-dashboard/assignments/${selectedAssignment.id}`
+                }>
+                  <Button variant="outline" className="mr-2">
+                    {selectedAssignment.kanbanBoardId ? 'View in Kanban' : 'View Full Details'}
+                  </Button>
                 </Link>
                 <DialogClose asChild>
                   <Button>Close</Button>
@@ -402,18 +407,22 @@ export default function StudentDashboard() {
   const [assignments, setAssignments] = useState([])
   const [kanbanData, setKanbanData] = useState({ columns: [] })
   const [isDataLoading, setIsDataLoading] = useState(true)
+  const [templates, setTemplates] = useState([]) // Add this state for templates
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
 
   // Fetch data when the component mounts and user is available
   useEffect(() => {
     if (user?.id) {
       const fetchData = async () => {
         setIsDataLoading(true);
-        const [assignmentsData, kanbanBoardsData] = await Promise.all([
+        const [assignmentsData, kanbanBoardsData, templatesData] = await Promise.all([
           getAssignments(user.id),
-          getKanbanData(user.id)
+          getKanbanData(user.id),
+          getTemplates() // Add this function call
         ]);
         
         setAssignments(assignmentsData);
+        setTemplates(templatesData); // Set templates data
         
         // Process kanban data for the first board if available
         if (kanbanBoardsData.boards && kanbanBoardsData.boards.length > 0) {
@@ -431,6 +440,18 @@ export default function StudentDashboard() {
       fetchData();
     }
   }, [user]);
+
+  // Add this function to fetch templates
+  async function getTemplates() {
+    try {
+      const response = await fetch('/api/templates');
+      if (!response.ok) throw new Error('Failed to fetch templates');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      return [];
+    }
+  }
 
   // Format assignment stats for pie chart
   const getAssignmentStats = () => {
@@ -502,8 +523,19 @@ export default function StudentDashboard() {
               ) : upcomingAssignments.length > 0 ? (
                 <ul className="space-y-2">
                   {upcomingAssignments.map(assignment => (
-                    <li key={assignment.id} className="flex justify-between items-center">
-                      <span>{assignment.title}</span>
+                    <li 
+                      key={assignment.id} 
+                      className="flex justify-between items-center p-2 rounded hover:bg-accent/50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedAssignment(assignment)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          assignment.status === 'completed' ? 'bg-green-600' :
+                          assignment.status === 'in-progress' ? 'bg-yellow-500' :
+                          'bg-red-500'
+                        }`}></div>
+                        <span className="font-medium">{assignment.title}</span>
+                      </div>
                       <span className="text-sm text-muted-foreground">
                         {new Date(assignment.dueDate).toLocaleDateString('en-US', { 
                           month: 'short', 
@@ -519,29 +551,69 @@ export default function StudentDashboard() {
                 <p className="text-center py-4 text-muted-foreground">No upcoming assignments</p>
               )}
             </CardContent>
+            <CardFooter>
+              <Link href="/student-dashboard/assignments" className="w-full">
+                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                  <span>View All Assignments</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </CardFooter>
           </Card>
 
           <Card className="transition-all duration-300 hover:shadow-md">
             <CardHeader className="pb-2">
-              <CardTitle>Study Groups</CardTitle>
-              <CardDescription>Your active study groups</CardDescription>
+              <CardTitle>Template Shortcuts</CardTitle>
+              <CardDescription>Quick access to your templates</CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                <li className="flex justify-between items-center">
-                  <span>Calculus Study Group</span>
-                  <span className="text-sm text-muted-foreground">5 members</span>
-                </li>
-                <li className="flex justify-between items-center">
-                  <span>Chemistry Lab Partners</span>
-                  <span className="text-sm text-muted-foreground">3 members</span>
-                </li>
-                <li className="flex justify-between items-center">
-                  <span>Programming Project Team</span>
-                  <span className="text-sm text-muted-foreground">4 members</span>
-                </li>
-              </ul>
+              {isDataLoading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : templates.length > 0 ? (
+                <ul className="space-y-2">
+                  {templates.slice(0, 3).map(template => (
+                    <li 
+                      key={template.id} 
+                      className="flex justify-between items-center p-2 rounded hover:bg-accent/50 cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (template.link) {
+                          // Ensure the link has a protocol prefix to avoid relative URL handling
+                          const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-full bg-primary/10 p-1">
+                          {template.category === "assignment" ? (
+                            <FileText className="h-3 w-3 text-primary" />
+                          ) : template.category === "notes" ? (
+                            <FileCode className="h-3 w-3 text-primary" />
+                          ) : (
+                            <Calculator className="h-3 w-3 text-primary" />
+                          )}
+                        </div>
+                        <span className="font-medium">{template.title}</span>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-center py-4 text-muted-foreground">No templates available</p>
+              )}
             </CardContent>
+            <CardFooter>
+              <Link href="/student-dashboard/templates" className="w-full">
+                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                  <span>View All Templates</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </CardFooter>
           </Card>
 
           <Card className="transition-all duration-300 hover:shadow-md">
@@ -775,6 +847,76 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Add Assignment Detail Dialog - similar to the one in DeadlineCalendar */}
+        <Dialog open={selectedAssignment !== null} onOpenChange={(open) => !open && setSelectedAssignment(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Assignment Details</DialogTitle>
+              <DialogDescription>
+                View your assignment details
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedAssignment && (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <h3 className="text-lg font-bold">{selectedAssignment.title}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedAssignment.course || 'General Assignment'}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="font-medium">Due Date</p>
+                    <p>
+                      {new Date(selectedAssignment.dueDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium">Status</p>
+                    <div className="flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-2 ${
+                        selectedAssignment.status === 'completed' ? 'bg-green-600' :
+                        selectedAssignment.status === 'in-progress' ? 'bg-yellow-500' :
+                        'bg-red-500'
+                      }`}></div>
+                      <p className="capitalize">{selectedAssignment.status.replace('-', ' ')}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {selectedAssignment.description && (
+                  <div>
+                    <p className="font-medium">Description</p>
+                    <p className="text-sm">{selectedAssignment.description}</p>
+                  </div>
+                )}
+                
+                <div className="flex justify-end mt-4">
+                  <Link href={selectedAssignment.kanbanBoardId ? 
+                    `/student-dashboard/kanban/${selectedAssignment.kanbanBoardId}` : 
+                    `/student-dashboard/assignments/${selectedAssignment.id}`
+                  }>
+                    <Button variant="outline" className="mr-2">
+                      {selectedAssignment.kanbanBoardId ? 'View in Kanban' : 'View Full Details'}
+                    </Button>
+                  </Link>
+                  <DialogClose asChild>
+                    <Button>Close</Button>
+                  </DialogClose>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </AnimatedSection>
   )
 }

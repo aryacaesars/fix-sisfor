@@ -1,38 +1,52 @@
-import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import prisma from "@/lib/prisma"
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import prisma from '@/lib/prisma' // Make sure this import is correct
+import { authOptions } from '@/lib/auth' // Make sure this import is correct
 
-export async function GET() {
+// Handle GET request to fetch assignments
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    // Check if user is a student
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    })
-
-    if (user?.role !== "student") {
-      return NextResponse.json({ error: "Only students can access assignments" }, { status: 403 })
+    
+    // Get the user ID from the session
+    const userId = (session.user as any).id
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID not found in session' }, { status: 400 })
     }
-
-    // Get assignments for the user
+    
+    console.log("Fetching assignments for user:", userId)
+    
+    // Get assignments for the logged-in user
     const assignments = await prisma.assignment.findMany({
-      where: { userId: session.user.id },
-      orderBy: { dueDate: "asc" },
+      where: { 
+        userId: userId 
+      },
+      orderBy: { 
+        updatedAt: 'desc' 
+      },
+      include: {
+        // You can include related data if needed
+      }
     })
-
+    
+    console.log(`Found ${assignments.length} assignments`)
+    
     return NextResponse.json(assignments)
   } catch (error) {
-    console.error("Error fetching assignments:", error)
-    return NextResponse.json({ error: "An error occurred while fetching assignments" }, { status: 500 })
+    console.error('Error in assignments API:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch assignments', details: (error as Error).message }, 
+      { status: 500 }
+    )
   }
 }
 
+// Handle POST request to create a new assignment
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -41,38 +55,91 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is a student
+    // Check if user is a student (case-insensitive)
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     })
 
-    if (user?.role !== "student") {
+    if (!user?.role || !["student", "Student"].includes(user.role)) {
       return NextResponse.json({ error: "Only students can create assignments" }, { status: 403 })
     }
 
     const body = await request.json()
-    const { title, description, course, status, dueDate } = body
+    console.log("Request body:", body) // Log the request body
+    
+    const { title, description, course, status, dueDate, createKanbanBoard = true } = body
 
+    // Validate required fields
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
+
+    console.log("Creating assignment with values:", { title, description, course, status, dueDate })
+    console.log("Will create Kanban board:", createKanbanBoard)
 
     // Create a new assignment
     const assignment = await prisma.assignment.create({
       data: {
         title,
-        description,
-        course,
+        description: description || null,
+        course: course || null,
         status: status || "not-started",
         dueDate: dueDate ? new Date(dueDate) : null,
         userId: session.user.id,
       },
     })
 
-    return NextResponse.json(assignment, { status: 201 })
+    console.log("Assignment created:", assignment)
+
+    // Always create a Kanban board for assignments in this page
+    try {
+      console.log("Creating Kanban board for assignment:", assignment.id)
+      
+      // Create Kanban board
+      const kanbanBoard = await prisma.kanbanBoard.create({
+        data: {
+          title: `${title} Board`,
+          description: `Kanban board for assignment: ${title}`,
+          createdById: session.user.id,
+          columns: {
+            create: [
+              { title: "To Do", order: 1 },
+              { title: "In Progress", order: 2 },
+              { title: "Done", order: 3 },
+            ],
+          },
+        },
+      })
+
+      console.log("Kanban Board Created:", kanbanBoard)
+
+      // Update assignment with Kanban board ID
+      const updatedAssignment = await prisma.assignment.update({
+        where: { id: assignment.id },
+        data: { kanbanBoardId: kanbanBoard.id },
+      })
+
+      console.log("Assignment updated with board ID:", updatedAssignment)
+
+      return NextResponse.json({ 
+        ...updatedAssignment, 
+        kanbanBoard: kanbanBoard 
+      }, { status: 201 })
+    } catch (boardError) {
+      console.error("Error creating Kanban board:", boardError)
+      
+      // Still return the assignment even if board creation fails
+      return NextResponse.json({
+        ...assignment,
+        error: "Assignment created but failed to create Kanban board"
+      }, { status: 201 })
+    }
   } catch (error) {
     console.error("Error creating assignment:", error)
-    return NextResponse.json({ error: "An error occurred while creating the assignment" }, { status: 500 })
+    return NextResponse.json({ 
+      error: "An error occurred while creating the assignment",
+      details: (error as Error).message
+    }, { status: 500 })
   }
 }
 

@@ -1,61 +1,70 @@
 "use client"
 
-import { useAuth } from "@/context/auth-context"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 
-export function useRBAC(allowedRoles?: string[]) {
-  const { user, status, isAuthorized } = useAuth()
-  const router = useRouter()
-  const [isChecking, setIsChecking] = useState(true)
+export function useRBAC(allowedRoles: string[]) {
+  const { data: session, status } = useSession()
+  const [isAuthorized, setIsAuthorized] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    const checkAuth = async () => {
-      // Add a small delay to ensure auth context is initialized
-      await new Promise((resolve) => setTimeout(resolve, 300))
-
-      // If authentication check is complete
-      if (status !== "loading") {
+    const checkAccess = async () => {
+      setIsLoading(true)
+      
+      try {
+        // Not authenticated
         if (status === "unauthenticated") {
-          // User is not logged in, redirect to login
-          router.push("/login")
-        } else if (allowedRoles && !isAuthorized(allowedRoles)) {
-          // User is authenticated but doesn't have the required role
-          router.push("/unauthorized")
+          console.log("Session unauthenticated")
+          setIsAuthorized(false)
+          setIsLoading(false)
+          return
         }
-        setIsChecking(false)
+        
+        // Still loading session
+        if (status === "loading") {
+          console.log("Session loading")
+          return // Keep isLoading true
+        }
+        
+        // Authenticated, check role
+        if (session?.user) {
+          console.log("Session authenticated:", session.user)
+          
+          // Get user role from session or API
+          let userRole = (session.user as any)?.role
+          
+          // Log for debugging
+          console.log("User role from session:", userRole)
+          
+          // Make role case-insensitive for comparison
+          const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase())
+          const normalizedUserRole = userRole?.toLowerCase()
+          
+          console.log("Checking if", normalizedUserRole, "is in", normalizedAllowedRoles)
+          
+          // Check if user has the required role
+          const hasAccess = normalizedUserRole && normalizedAllowedRoles.includes(normalizedUserRole)
+          console.log("Has access:", hasAccess)
+          
+          setIsAuthorized(hasAccess)
+          setUser(session.user)
+        } else {
+          console.log("No user in session")
+          setIsAuthorized(false)
+        }
+      } catch (error) {
+        console.error("Error checking authorization:", error)
+        setIsAuthorized(false)
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    if (allowedRoles) {
-      checkAuth()
-    } else {
-      setIsChecking(false)
-    }
-  }, [allowedRoles, isAuthorized, router, status])
+    checkAccess()
+  }, [allowedRoles, session, status])
 
-  // Add a checkAccess function that can be called from components
-  const checkAccess = (requiredRole: string | string[]) => {
-    const rolesToCheck = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
-
-    if (status === "unauthenticated") {
-      router.push("/login")
-      return false
-    }
-
-    if (!isAuthorized(rolesToCheck)) {
-      router.push("/unauthorized")
-      return false
-    }
-
-    return true
-  }
-
-  return {
-    isAuthorized: allowedRoles ? isAuthorized(allowedRoles) : false,
-    role: user?.role || null,
-    isLoading: status === "loading" || isChecking,
-    checkAccess,
-  }
+  return { isAuthorized, isLoading, user }
 }
 

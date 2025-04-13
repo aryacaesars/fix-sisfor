@@ -20,15 +20,16 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
+import Link from "next/link"; // Make sure Link is imported
 
 interface Project {
   id: string
   title: string
-  client: string
+  clientName: string // Update from client to clientName
   startDate: string
   endDate: string
   budget: number
-  status: "active" | "completed" | "on-hold"
+  status: string
   description: string
   assignedTo: string
   kanbanBoardId?: string  // Reference to the Kanban board
@@ -85,7 +86,7 @@ export default function FreelancerProjectsPage() {
   const [newProject, setNewProject] = useState({
     title: "",
     description: "",
-    client: "",
+    clientName: "", // Changed from client to clientName to match schema
     startDate: "",
     endDate: "",
     budget: "",
@@ -117,7 +118,7 @@ export default function FreelancerProjectsPage() {
         body: JSON.stringify({
           title: newProject.title,
           description: newProject.description,
-          client: newProject.client,
+          clientName: newProject.clientName, // Changed from client to clientName
           startDate: newProject.startDate,
           endDate: newProject.endDate,
           budget: parseFloat(newProject.budget) || 0,
@@ -140,7 +141,7 @@ export default function FreelancerProjectsPage() {
       setNewProject({
         title: "",
         description: "",
-        client: "",
+        clientName: "", // Changed from client to clientName
         startDate: "",
         endDate: "",
         budget: "",
@@ -181,7 +182,7 @@ export default function FreelancerProjectsPage() {
   const filteredProjects = (projects || []).filter(
     (project) =>
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.client.toLowerCase().includes(searchTerm.toLowerCase()),
+      project.clientName.toLowerCase().includes(searchTerm.toLowerCase()), // Update from client to clientName
   )
 
   const getStatusColor = (status: string) => {
@@ -239,11 +240,11 @@ export default function FreelancerProjectsPage() {
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="client" className="text-right">Client Name</Label>
+                  <Label htmlFor="clientName" className="text-right">Client Name</Label>
                   <Input
-                    id="client"
-                    name="client"
-                    value={newProject.client}
+                    id="clientName"
+                    name="clientName"
+                    value={newProject.clientName}
                     onChange={handleInputChange}
                     className="col-span-3"
                     required
@@ -357,7 +358,7 @@ export default function FreelancerProjectsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProjects.map((project) => (
-          <Card key={project.id} className="transition-all duration-300 hover:shadow-md">
+          <Card key={project.id} className="transition-all duration-300 hover:shadow-md flex flex-col"> {/* Added flex flex-col */}
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg">{project.title}</CardTitle>
@@ -365,9 +366,9 @@ export default function FreelancerProjectsPage() {
                   {project.status}
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">{project.client}</p>
+              <p className="text-sm text-muted-foreground">{project.clientName}</p> {/* Update from client to clientName */}
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-grow"> {/* Added flex-grow */}
               <p className="text-sm mb-4">{project.description}</p>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="flex items-center gap-1">
@@ -389,9 +390,12 @@ export default function FreelancerProjectsPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="outline" size="sm">
-                Details
-              </Button>
+              {/* Wrap the Details button with Link */}
+              <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref>
+                <Button variant="outline" size="sm">
+                  Details
+                </Button>
+              </Link>
               <Button 
   variant="secondary" 
   size="sm" 
@@ -409,7 +413,7 @@ export default function FreelancerProjectsPage() {
 >
   View Kanban
 </Button>
-              <Button size="sm">Manage</Button>
+              <Button size="sm" disabled>Manage</Button>
             </CardFooter>
           </Card>
         ))}

@@ -44,67 +44,137 @@ export async function POST(request: Request) {
     // Check if user is a freelancer
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
+      select: { id: true, role: true }
     });
 
-    if (user?.role !== "freelancer") {
-      return NextResponse.json({ error: "Only freelancers can access projects" }, { status: 403 });
+    if (!user || user.role !== "freelancer") {
+      return NextResponse.json({ error: "Only freelancers can create projects" }, { status: 403 });
     }
 
     const body = await request.json();
     console.log("Request Body:", body);
 
-    const { title, description, client, startDate, endDate, budget, status, assignedTo } = body;
+    // Check if clientName exists instead of client
+    const { title, description, client, clientName, startDate, endDate, budget, status, assignedTo } = body;
+    
+    // Use either client or clientName (handle potential field name mismatch)
+    const clientValue = client || clientName;
 
-    if (!title || !client || !endDate || !budget || !assignedTo) {
-      console.error("Validation Error: Missing required fields");
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // Enhanced validation with detailed error messages
+    const missingFields = [];
+    if (!title) missingFields.push("title");
+    if (!clientValue) missingFields.push("client/clientName");
+    if (!endDate) missingFields.push("endDate");
+    if (budget === undefined) missingFields.push("budget");
+    if (!assignedTo) missingFields.push("assignedTo");
+    
+    if (missingFields.length > 0) {
+      console.error(`Validation Error: Missing fields: ${missingFields.join(", ")}`, body);
+      return NextResponse.json({ 
+        error: "Missing required fields", 
+        fields: missingFields 
+      }, { status: 400 });
     }
 
-    // Create project with user ID from session
-    const project = await prisma.project.create({
-      data: {
-        title,
-        description,
-        clientName: client,
-        startDate: startDate ? new Date(startDate) : new Date(),
-        endDate: new Date(endDate),
-        budget: parseFloat(budget),
-        status,
-        assignedTo,
-        userId: session.user.id, // Set the user ID from the session
-      },
-    });
+    // Rest of the code remains the same, but use clientValue for clientName
+    // Validate budget is a number
+    let budgetValue;
+    try {
+      budgetValue = parseFloat(budget);
+      if (isNaN(budgetValue)) throw new Error("Not a number");
+    } catch (error) {
+      console.error("Validation Error: Budget must be a valid number", { budget });
+      return NextResponse.json({ error: "Budget must be a valid number" }, { status: 400 });
+    }
 
-    console.log("Project Created:", project);
+    // Validate dates
+    let parsedStartDate, parsedEndDate;
+    try {
+      parsedStartDate = startDate ? new Date(startDate) : new Date();
+      parsedEndDate = new Date(endDate);
+      
+      if (parsedEndDate.toString() === "Invalid Date") {
+        throw new Error("Invalid end date format");
+      }
+    } catch (error) {
+      console.error("Validation Error: Invalid date format", { startDate, endDate });
+      return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+    }
 
-    // Create Kanban board with proper user ID
-    const kanbanBoard = await prisma.kanbanBoard.create({
-      data: {
-        title: `${title} Board`,
-        description: `Kanban board for project: ${title}`,
-        createdById: session.user.id, // Use the authenticated user's ID
-        columns: {
-          create: [
-            { title: "To Do", order: 1 },
-            { title: "In Progress", order: 2 },
-            { title: "Done", order: 3 },
-          ],
-        },
-      },
-    });
+    try {
+      // Use a transaction to ensure all operations succeed or fail as a unit
+      const result = await prisma.$transaction(async (tx) => {
+        // Create project
+        const projectData = {
+          title,
+          description: description || "",
+          clientName: clientValue, // Use clientValue here instead of client
+          startDate: parsedStartDate,
+          endDate: parsedEndDate,
+          budget: budgetValue,
+          status: status || "Not Started",
+          assignedTo,
+          userId: session.user.id,
+        };
+        
+        console.log("Creating project with data:", projectData);
+        
+        const project = await tx.project.create({
+          data: projectData
+        });
 
-    console.log("Kanban Board Created:", kanbanBoard);
+        console.log("Project Created:", project);
 
-    // Update project with Kanban board ID
-    await prisma.project.update({
-      where: { id: project.id },
-      data: { kanbanBoardId: kanbanBoard.id },
-    });
+        // Create Kanban board
+        const kanbanData = {
+          title: `${title} Board`,
+          description: `Kanban board for project: ${title}`,
+          createdById: session.user.id,
+          columns: {
+            create: [
+              { title: "To Do", order: 1 },
+              { title: "In Progress", order: 2 },
+              { title: "Done", order: 3 },
+            ],
+          },
+        };
+        
+        console.log("Creating kanban board with data:", kanbanData);
+        
+        const kanbanBoard = await tx.kanbanBoard.create({
+          data: kanbanData
+        });
 
-    return NextResponse.json({ project, kanbanBoard }, { status: 201 });
+        console.log("Kanban Board Created:", kanbanBoard);
+
+        // Update project with Kanban board ID
+        const updatedProject = await tx.project.update({
+          where: { id: project.id },
+          data: { kanbanBoardId: kanbanBoard.id },
+        });
+
+        return { project: updatedProject, kanbanBoard };
+      });
+
+      return NextResponse.json(result, { status: 201 });
+    } catch (error) {
+      console.error("Transaction Error:", error);
+      if (error instanceof Error) {
+        if (error.message.includes("Foreign key constraint")) {
+          return NextResponse.json({ 
+            error: "Failed to create project", 
+            details: "Reference constraint failed. Check assignedTo value."
+          }, { status: 400 });
+        }
+      }
+      throw error; // Re-throw to be caught by outer catch block
+    }
   } catch (error) {
     console.error("Error in POST /api/projects:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Failed to create project", 
+      details: error instanceof Error ? error.message : "Unknown error" 
+    }, { status: 500 });
   }
 }
 

@@ -62,41 +62,42 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
-
     try {
-      const result = await login(formData.email, formData.password)
-
-      if (result.success) {
-        toast({
-          title: "Login successful",
-          description: "Welcome back to Ciao!",
-        });
-
-        // Get user role from the login result
-        const userRole = result.role; // Assuming the role is returned in the result
-
-      } else {
-        // Check if the error is about email verification
-        if (result.message.includes("verify your email")) {
-          setError("Please verify your email before logging in")
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        // Jika error karena email belum diverifikasi
+        if (data.error && data.error.toLowerCase().includes("belum diverifikasi")) {
+          setError("Email belum diverifikasi. Silakan cek email Anda untuk verifikasi.")
           toast({
-            title: "Verification required",
-            description: "Please check your email for a verification link or request a new one.",
+            title: "Verifikasi diperlukan",
+            description: "Silakan cek email Anda untuk link verifikasi atau minta ulang.",
             variant: "destructive",
           })
-          // Redirect to verification page
-          router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
-        } else {
-          setError(result.message)
+          router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`)
+          setIsLoading(false)
+          return
         }
+        setError(data.error || "Login gagal")
+        setIsLoading(false)
+        return
       }
-    } catch (error) {
-      setError("An unexpected error occurred. Please try again.")
-      toast({
-        title: "Login failed",
-        description: "An error occurred during login. Please try again.",
-        variant: "destructive",
-      })
+      // Hanya panggil login context jika response.ok
+      const loginResult = await login(formData.email, formData.password)
+      if (loginResult.success) {
+        toast({
+          title: "Login berhasil",
+          description: "Selamat datang kembali!",
+        })
+      } else {
+        setError(loginResult.message)
+      }
+    } catch (err) {
+      setError("Terjadi kesalahan saat login")
     } finally {
       setIsLoading(false)
     }

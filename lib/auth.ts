@@ -29,6 +29,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials")
         }
 
+        if (!user.emailVerified) {
+          throw new Error("Email belum diverifikasi")
+        }
+
         const isCorrectPassword = await bcrypt.compare(credentials.password, user.hashedPassword)
 
         if (!isCorrectPassword) {

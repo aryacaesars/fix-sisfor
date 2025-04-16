@@ -107,10 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           message: data.error || "Registration failed",
         }
       }
-
-      // Auto login after successful registration
-      const loginResult = await login(email, password)
-      return loginResult
+      // Jangan auto login setelah signup, arahkan ke halaman verifikasi
+      return {
+        success: true,
+        message: data.message || "Registration successful. Please verify your email.",
+      }
     } catch (error) {
       console.error("Registration error:", error)
       return {

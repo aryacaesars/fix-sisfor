@@ -42,7 +42,7 @@ export function Navbar({ navItems = [] }: NavbarProps) {
     <header
       className={`sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "shadow-sm" : ""}`}
     >
-      <div className="w-full max-w-[1200px] mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1200px] mx-auto h-16 items-center px-4 sm:px-6 lg:px-8 grid grid-cols-3">
         {/* Logo Section - Left */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center space-x-2 py-2">
@@ -51,8 +51,8 @@ export function Navbar({ navItems = [] }: NavbarProps) {
           </Link>
         </div>
 
-        {/* Navigation Links - Center (hidden on mobile) */}
-        <nav className="hidden md:flex items-center justify-center flex-1 px-4">
+        {/* Navigation Links - Center (perfectly centered) */}
+        <nav className="flex items-center justify-center">
           <ul className="flex space-x-6">
             {items.map((item, index) => (
               <li key={index}>
@@ -68,21 +68,13 @@ export function Navbar({ navItems = [] }: NavbarProps) {
         </nav>
 
         {/* Actions - Right */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-end space-x-4">
           <ThemeToggle />
-          <div className="hidden md:flex items-center space-x-4">
-            <Link
-              href="/auth/login"
-              className="text-sm font-medium px-2 py-2 hover:text-primary transition-colors duration-200"
-            >
-              Log in
-            </Link>
+          <Link href="/auth/login" className="hidden md:inline-block">
             <Button className="transition-all duration-200 hover:scale-105" size="sm">
-              Sign up free
+              Get Started
             </Button>
-          </div>
-
-          {/* Mobile Menu Button */}
+          </Link>
           <button
             className="md:hidden p-2 rounded-md hover:bg-secondary transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -111,17 +103,14 @@ export function Navbar({ navItems = [] }: NavbarProps) {
             </nav>
             <div className="flex flex-col space-y-3 pt-3 border-t">
               <Link
-
                 href="/auth/login"
-
-                className="text-sm font-medium py-2 hover:text-primary transition-colors duration-200"
+                className="w-full"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Log in
+                <Button className="w-full transition-all duration-200">
+                  Get Started
+                </Button>
               </Link>
-              <Button className="w-full transition-all duration-200" onClick={() => setIsMobileMenuOpen(false)}>
-                Sign up free
-              </Button>
             </div>
           </div>
         </div>

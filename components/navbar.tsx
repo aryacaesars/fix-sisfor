@@ -42,18 +42,18 @@ export function Navbar({ navItems = [] }: NavbarProps) {
     <header
       className={`sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "shadow-sm" : ""}`}
     >
-      <div className="w-full max-w-[1200px] mx-auto h-16 items-center px-4 sm:px-6 lg:px-8 grid grid-cols-3">
+      <div className="w-full max-w-[1200px] mx-auto h-16 items-center px-4 sm:px-6 lg:px-8 flex justify-between">
         {/* Logo Section - Left */}
-        <div className="flex items-center">
+        <div className="flex items-center flex-shrink-0">
           <Link href="/" className="flex items-center space-x-2 py-2">
             <Layers className="h-6 w-6 text-primary transition-all duration-300 hover:scale-110" />
             <span className="text-xl font-bold">Ciao</span>
           </Link>
         </div>
 
-        {/* Navigation Links - Center (perfectly centered) */}
-        <nav className="flex items-center justify-center">
-          <ul className="flex space-x-6">
+        {/* Navigation Links - Center (desktop only) */}
+        <nav className="hidden md:flex items-center justify-center flex-1">
+          <ul className="flex space-x-6 justify-center">
             {items.map((item, index) => (
               <li key={index}>
                 <Link
@@ -68,7 +68,7 @@ export function Navbar({ navItems = [] }: NavbarProps) {
         </nav>
 
         {/* Actions - Right */}
-        <div className="flex items-center justify-end space-x-4">
+        <div className="flex items-center justify-end space-x-4 flex-shrink-0">
           <ThemeToggle />
           <Link href="/auth/login" className="hidden md:inline-block">
             <Button className="transition-all duration-200 hover:scale-105" size="sm">

@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
+  "cron": [
+    {
+      "path": "/api/cron/deadline-email",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}

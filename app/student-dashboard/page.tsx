@@ -29,6 +29,7 @@ import {
   TooltipTrigger
 } from "@/components/ui/tooltip"
 import { RoleBasedCalendar } from "@/components/role-based-calendar"
+import { useToast } from "@/hooks/use-toast"
 
 // Dynamically import chart components to avoid SSR issues
 const PieChart = dynamic(() => import("recharts").then(mod => mod.PieChart), { ssr: false })
@@ -95,6 +96,7 @@ const KanbanBoard = ({ columns = [] }: { columns: KanbanColumn[] }) => {
 
 export default function StudentDashboard() {
   const { isAuthorized, isLoading, user } = useRBAC(["student"])
+  const { toast } = useToast();
   const router = useRouter()
   const [assignments, setAssignments] = useState([])
   const [kanbanData, setKanbanData] = useState({ columns: [] })
@@ -178,6 +180,28 @@ export default function StudentDashboard() {
       router.push("/unauthorized")
     }
   }, [isLoading, isAuthorized, router])
+
+  useEffect(() => {
+    if (!isDataLoading && assignments.length > 0 && user?.id) {
+      const today = new Date("2025-04-19"); // gunakan tanggal context
+      assignments.forEach((assignment: any) => {
+        if (!assignment.dueDate) return;
+        const dueDate = new Date(assignment.dueDate);
+        const diff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff === 1) {
+          const notifKey = `notif-assignment-h1-${user.id}-${assignment.id}`;
+          if (!localStorage.getItem(notifKey)) {
+            toast({
+              title: `Deadline besok: ${assignment.title}`,
+              description: `Assignment untuk ${assignment.course || 'mata kuliah'} akan deadline besok (${dueDate.toLocaleDateString('id-ID')})`,
+              variant: "default"
+            });
+            localStorage.setItem(notifKey, "1");
+          }
+        }
+      });
+    }
+  }, [isDataLoading, assignments, user, toast]);
 
   if (isLoading) {
     return (

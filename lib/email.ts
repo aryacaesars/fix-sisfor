@@ -35,3 +35,12 @@ export async function sendVerificationEmail(email: string, token: string) {
   })
 }
 
+export async function sendEmail({ to, subject, html }: { to: string, subject: string, html: string }) {
+  await transporter.sendMail({
+    from: `"Ciao Support" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+  })
+}
+

@@ -10,7 +10,7 @@ import Link from "next/link"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { RoleBasedCalendar } from "@/components/role-based-calendar"
-
+import { useToast } from "@/hooks/use-toast"
 
 export default function FreelancerDashboard() {
   const { isAuthorized, isLoading, user } = useRBAC(["freelancer"])
@@ -20,6 +20,7 @@ export default function FreelancerDashboard() {
   const [templates, setTemplates] = useState<any[]>([]) // Add type annotation
   const [isDataLoading, setIsDataLoading] = useState(true)
   const [selectedProjectForDialog, setSelectedProjectForDialog] = useState<any>(null); // State for Upcoming Deadlines dialog
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check authorization as before
@@ -58,6 +59,28 @@ export default function FreelancerDashboard() {
       fetchData()
     }
   }, [user]) // Dependency array includes user
+
+  useEffect(() => {
+    if (!isDataLoading && projects.length > 0 && user?.id) {
+      const today = new Date("2025-04-19"); // gunakan tanggal context
+      projects.forEach((project: any) => {
+        if (!project.endDate) return;
+        const endDate = new Date(project.endDate);
+        const diff = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff === 1) {
+          const notifKey = `notif-project-h1-${user.id}-${project.id}`;
+          if (!localStorage.getItem(notifKey)) {
+            toast({
+              title: `Deadline besok: ${project.title}`,
+              description: `Project untuk klien ${project.clientName || ''} akan deadline besok (${endDate.toLocaleDateString('id-ID')})`,
+              variant: "default"
+            });
+            localStorage.setItem(notifKey, "1");
+          }
+        }
+      });
+    }
+  }, [isDataLoading, projects, user, toast]);
 
   // Loading and Unauthorized states remain the same
 

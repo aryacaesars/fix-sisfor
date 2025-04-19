@@ -1,0 +1,8 @@
+{
+  "cron": [
+    {
+      "path": "/api/cron/deadline-email",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}

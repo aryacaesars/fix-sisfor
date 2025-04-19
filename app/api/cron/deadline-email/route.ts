@@ -6,7 +6,14 @@ const prisma = new PrismaClient();
 
 export const runtime = 'nodejs'; // agar bisa pakai nodemailer
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Cek Authorization header
+  const authHeader = request.headers.get('authorization');
+  const secret = process.env.CRON_SECRET;
+  if (!authHeader || !secret || authHeader !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const today = new Date(); // gunakan tanggal hari ini
   const besok = new Date(today);
   besok.setDate(today.getDate() + 1);

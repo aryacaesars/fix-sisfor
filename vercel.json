@@ -11,11 +11,5 @@
       "src": "/api/(.*)",
       "dest": "/api/$1"
     }
-  ],
-  "cron": [
-    {
-      "path": "/api/cron/deadline-email",
-      "schedule": "0 7 * * *"
-    }
   ]
 }

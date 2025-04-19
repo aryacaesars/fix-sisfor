@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"; // Make sure Link is imported
+import { Dialog as AlertDialog, DialogContent as AlertDialogContent, DialogHeader as AlertDialogHeader, DialogTitle as AlertDialogTitle, DialogFooter as AlertDialogFooter } from "@/components/ui/dialog"
 
 interface Project {
   id: string
@@ -42,6 +43,8 @@ export default function FreelancerProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   
   // Fetch projects from the API
   const fetchProjects = async () => {
@@ -159,6 +162,35 @@ export default function FreelancerProjectsPage() {
       toast({
         title: "Error creating project",
         description: "Please try again later",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle delete project
+  const handleDeleteProject = (project: Project) => {
+    setProjectToDelete(project)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteProject = async () => {
+    if (!projectToDelete) return
+    try {
+      const response = await fetch(`/api/projects/${projectToDelete.id}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) throw new Error("Failed to delete project")
+      setProjects(projects.filter((p) => p.id !== projectToDelete.id))
+      setDeleteDialogOpen(false)
+      setProjectToDelete(null)
+      toast({
+        title: "Success",
+        description: "Project deleted successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
         variant: "destructive",
       })
     }
@@ -362,8 +394,17 @@ export default function FreelancerProjectsPage() {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg">{project.title}</CardTitle>
-                <div className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>
-                  {project.status}
+                <div className="flex gap-2 items-center">
+                  <div className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>{project.status}</div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteProject(project)}
+                    className="text-red-500 hover:bg-red-50"
+                    title="Delete Project"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </Button>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">{project.clientName}</p> {/* Update from client to clientName */}
@@ -418,6 +459,19 @@ export default function FreelancerProjectsPage() {
           </Card>
         ))}
       </div>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+          </AlertDialogHeader>
+          <p>Are you sure you want to delete this project? This action cannot be undone.</p>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteProject}>Delete</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AnimatedSection>
   )
 }

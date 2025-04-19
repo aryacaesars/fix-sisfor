@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRBAC } from "@/hooks/use-rbac"
 import { format } from "date-fns"
 import { Calendar, Clock, Plus, Edit, Eye, Trash, Kanban, Search, Filter } from "lucide-react"
+import { Dialog as AlertDialog, DialogContent as AlertDialogContent, DialogHeader as AlertDialogHeader, DialogTitle as AlertDialogTitle, DialogFooter as AlertDialogFooter } from "@/components/ui/dialog"
 
 export default function AssignmentsPage() {
   const { isAuthorized, isLoading: authLoading } = useRBAC(["Student"])
@@ -50,6 +51,9 @@ export default function AssignmentsPage() {
     dueDate: ""
   })
   
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [assignmentToDelete, setAssignmentToDelete] = useState(null)
+
   // Check for the openModal query parameter and open the modal if it exists
   useEffect(() => {
     const openModal = searchParams.get('openModal')
@@ -212,6 +216,36 @@ export default function AssignmentsPage() {
     }
   }
 
+  // Handle delete assignment
+  const handleDeleteAssignment = async (assignment) => {
+    setAssignmentToDelete(assignment)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteAssignment = async () => {
+    if (!assignmentToDelete) return
+    try {
+      const response = await fetch(`/api/assignments/${assignmentToDelete.id}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) throw new Error("Failed to delete assignment")
+      setAssignments(assignments.filter((a) => a.id !== assignmentToDelete.id))
+      setDeleteDialogOpen(false)
+      setAssignmentToDelete(null)
+      setIsDetailsOpen(false)
+      toast({
+        title: "Success",
+        description: "Assignment deleted successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete assignment",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Get status color
   const getStatusColor = (status) => {
     switch (status) {
@@ -276,6 +310,15 @@ export default function AssignmentsPage() {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteAssignment(assignment)}
+                    className="text-red-500 hover:bg-red-50"
+                    title="Delete Assignment"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
                 </div>
                 <CardDescription className="font-medium">
                   {assignment.course}
@@ -437,6 +480,10 @@ export default function AssignmentsPage() {
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Assignment
                 </Button>
+                <Button variant="destructive" onClick={() => handleDeleteAssignment(selectedAssignment)}>
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
               </DialogFooter>
             </div>
           )}
@@ -512,6 +559,20 @@ export default function AssignmentsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+          </AlertDialogHeader>
+          <p>Are you sure you want to delete this assignment? This action cannot be undone.</p>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteAssignment}>Delete</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AnimatedSection>
   )
 }

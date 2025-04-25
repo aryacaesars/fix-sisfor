@@ -4,101 +4,88 @@ import { sendEmail } from '@/lib/email';
 
 export const runtime = 'nodejs'; // agar bisa pakai nodemailer
 
-export async function GET(request: Request) {
-  // Cek Authorization header
-  const authHeader = request.headers.get('authorization');
-  const secret = process.env.CRON_SECRET;
-  if (!authHeader || !secret || authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const today = new Date();
-  const besok = new Date(today);
-  besok.setDate(today.getDate() + 1);
-  besok.setHours(0, 0, 0, 0);
-  const besokEnd = new Date(besok);
-  besokEnd.setHours(23, 59, 59, 999);
-
+export async function GET(req: Request) {
   try {
-    // Assignment (student)
-    const assignments = await prisma.assignment.findMany({
+    // Verify cron secret
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (token !== process.env.CRON_SECRET) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    // Get all users with email notifications enabled
+    const users = await prisma.user.findMany({
       where: {
-        dueDate: {
-          gte: besok,
-          lte: besokEnd,
+        settings: {
+          emailNotifications: true,
         },
       },
-      include: { user: true },
-    });
-    console.log(`[CRON] Jumlah assignment deadline besok: ${assignments.length}`);
-
-    // Project (freelancer)
-    const projects = await prisma.project.findMany({
-      where: {
-        endDate: {
-          gte: besok,
-          lte: besokEnd,
+      include: {
+        settings: true,
+        projects: {
+          where: {
+            status: 'active',
+            endDate: {
+              gte: new Date(), // Projects that haven't ended yet
+            },
+          },
         },
       },
-      include: { user: true },
     });
-    console.log(`[CRON] Jumlah project deadline besok: ${projects.length}`);
 
-    // Kirim email assignment
-    for (const assignment of assignments) {
-      if (!assignment.user?.email) continue;
-      try {
+    // Process notifications for each user
+    for (const user of users) {
+      if (!user.email) continue;
+
+      // Get projects with upcoming deadlines (within 7 days)
+      const today = new Date();
+      const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const projectsWithUpcomingDeadlines = user.projects.filter(project => {
+        const endDate = new Date(project.endDate);
+        return endDate <= sevenDaysFromNow && endDate >= today;
+      });
+
+      if (projectsWithUpcomingDeadlines.length > 0) {
+        // Send email notification
         await sendEmail({
-          to: assignment.user.email,
-          subject: `Reminder: Deadline Assignment Besok - ${assignment.title}`,
+          to: user.email,
+          subject: 'Deadline Proyek Mendekat',
           html: `
-            <p>Halo <b>${assignment.user.name || ''}</b>,</p>
-            <p>Ini adalah pengingat bahwa assignment berikut akan deadline besok:</p>
-            <ul>
-              <li><b>Judul:</b> ${assignment.title}</li>
-              <li><b>Mata Kuliah:</b> ${assignment.course || '-'}</li>
-              <li><b>Deadline:</b> ${besok.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</li>
-            </ul>
-            <p>Pastikan Anda menyelesaikan dan mengumpulkan assignment tepat waktu.</p>
-            <p>Semangat dan sukses selalu!<br/>Tim Ciao</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+              <h2 style="color: #333; text-align: center;">Deadline Proyek Mendekat</h2>
+              <p>Halo ${user.name || 'Pengguna'},</p>
+              <p>Anda memiliki ${projectsWithUpcomingDeadlines.length} proyek yang mendekati deadline dalam 7 hari ke depan:</p>
+              <ul style="list-style: none; padding: 0;">
+                ${projectsWithUpcomingDeadlines.map(project => {
+                  const endDate = new Date(project.endDate);
+                  const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                  return `
+                    <li style="margin-bottom: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
+                      <strong>${project.title}</strong><br>
+                      Deadline: ${endDate.toLocaleDateString('id-ID')}<br>
+                      Sisa waktu: ${daysLeft} hari
+                    </li>
+                  `;
+                }).join('')}
+              </ul>
+              <p style="margin-top: 20px;">Silakan login ke dashboard Anda untuk melihat detail proyek.</p>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #666; font-size: 12px;">
+                <p>© ${new Date().getFullYear()} Ciao. All rights reserved.</p>
+              </div>
+            </div>
           `,
         });
-        console.log(`[CRON] Email assignment terkirim ke: ${assignment.user.email}`);
-      } catch (err) {
-        console.error(`[CRON] Gagal kirim email assignment ke: ${assignment.user.email}`, err);
       }
     }
 
-    // Kirim email project
-    for (const project of projects) {
-      if (!project.user?.email) continue;
-      try {
-        await sendEmail({
-          to: project.user.email,
-          subject: `Reminder: Deadline Project Besok - ${project.title}`,
-          html: `
-            <p>Halo <b>${project.user.name || ''}</b>,</p>
-            <p>Ini adalah pengingat bahwa project berikut akan deadline besok:</p>
-            <ul>
-              <li><b>Judul Project:</b> ${project.title}</li>
-              <li><b>Klien:</b> ${project.clientName || '-'}</li>
-              <li><b>Deadline:</b> ${besok.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</li>
-            </ul>
-            <p>Pastikan Anda menyelesaikan project ini sebelum deadline.</p>
-            <p>Salam sukses,<br/>Tim Ciao</p>
-          `,
-        });
-        console.log(`[CRON] Email project terkirim ke: ${project.user.email}`);
-      } catch (err) {
-        console.error(`[CRON] Gagal kirim email project ke: ${project.user.email}`, err);
-      }
-    }
-
-    return NextResponse.json({ assignments: assignments.length, projects: projects.length });
-  } catch (err) {
-    console.error('[CRON] Error utama:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[CRON_DEADLINE_EMAIL]', error);
+    return new NextResponse('Internal error', { status: 500 });
   }
 }

@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AnimatedSection } from "@/components/animated-section"
-import { Calendar, Clock, DollarSign, Users, ArrowLeft } from "lucide-react"
+import { Calendar, Clock, Users, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRBAC } from "@/hooks/use-rbac"
 import { Input } from "@/components/ui/input"
@@ -209,7 +209,20 @@ export default function ProjectDetailPage() {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return "Rp 0"
+    }
+    
+    try {
+      return new Intl.NumberFormat("id-ID", { 
+        style: "currency", 
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount)
+    } catch (error) {
+      return "Rp 0"
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -279,7 +292,7 @@ export default function ProjectDetailPage() {
                 <h3 className="text-lg font-medium">Details</h3>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-muted-foreground font-medium">Rp</span>
                     <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p>{formatCurrency(project.budget)}</p>

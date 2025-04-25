@@ -28,6 +28,7 @@ model User {
   sessions       Session[]
   TaskAssignee   TaskAssignee[]
   templates      Template[]
+  settings       UserSettings?
 }
 
 model Account {
@@ -195,4 +196,14 @@ model TaskAssignee {
   User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId])
+}
+
+model UserSettings {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  emailNotifications Boolean  @default(true)
+  theme             String   @default("system")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

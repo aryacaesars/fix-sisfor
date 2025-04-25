@@ -11,7 +11,6 @@ import {
   Filter,
   Clock,
   Calendar,
-  DollarSign,
   Users,
 } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
@@ -46,15 +45,13 @@ export default function FreelancerProjectsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
-  const [isManageMode, setIsManageMode] = useState(false) // State untuk mode Manage
+  const [isManageMode, setIsManageMode] = useState(false)
 
-  // Fungsi untuk memformat tanggal dengan handling error
   const formatDate = (dateString: string) => {
     if (!dateString) return "No date";
     
     try {
       const date = new Date(dateString);
-      // Check if date is valid before formatting
       if (isNaN(date.getTime())) {
         return "Invalid date";
       }
@@ -64,20 +61,23 @@ export default function FreelancerProjectsPage() {
     }
   };
 
-  // Fungsi untuk memformat mata uang dengan handling error
   const formatCurrency = (amount: number) => {
     if (amount === undefined || amount === null || isNaN(amount)) {
-      return "$0.00";
+      return "Rp 0"
     }
     
     try {
-      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+      return new Intl.NumberFormat("id-ID", { 
+        style: "currency", 
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount)
     } catch (error) {
-      return "$0.00";
+      return "Rp 0"
     }
   };
 
-  // Fetch projects from the API
   const fetchProjects = async () => {
     try {
       const response = await fetch("/api/projects", {
@@ -209,11 +209,9 @@ export default function FreelancerProjectsPage() {
                 e.preventDefault()
                 const formData = new FormData(e.target as HTMLFormElement)
                 
-                // Validate dates
                 const startDate = formData.get("startDate") as string;
                 const endDate = formData.get("endDate") as string;
                 
-                // Validate budget
                 const budgetStr = formData.get("budget") as string;
                 let budget: number;
                 try {
@@ -260,7 +258,6 @@ export default function FreelancerProjectsPage() {
                     description: "Project created successfully",
                   })
                   
-                  // Refresh projects to ensure we have the correct data
                   fetchProjects();
                 } catch (error) {
                   console.error("Error creating project:", error)
@@ -329,17 +326,20 @@ export default function FreelancerProjectsPage() {
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="budget" className="text-right">Budget ($)</Label>
-                    <Input
-                      id="budget"
-                      name="budget"
-                      type="number"
-                      placeholder="Enter budget amount"
-                      min="0"
-                      step="0.01"
-                      className="col-span-3"
-                      required
-                    />
+                    <Label htmlFor="budget" className="text-right">Budget</Label>
+                    <div className="col-span-3 flex items-center gap-2">
+                      <span className="text-muted-foreground font-medium">Rp</span>
+                      <Input
+                        id="budget"
+                        name="budget"
+                        type="number"
+                        placeholder="Enter budget amount"
+                        min="0"
+                        step="0.01"
+                        className="w-full"
+                        required
+                      />
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -447,8 +447,8 @@ export default function FreelancerProjectsPage() {
                     <span>{formatDate(project.endDate)}</span>
                   </div>
                   <div className="flex items-center gap-1 col-span-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatCurrency(project.budget)}</span>
+                    <span className="text-muted-foreground font-medium">Rp</span>
+                    <span>{formatCurrency(project.budget).replace('Rp', '')}</span>
                   </div>
                   <div className="flex items-center gap-1 col-span-2 mt-2">
                     <Users className="h-4 w-4 text-muted-foreground" />

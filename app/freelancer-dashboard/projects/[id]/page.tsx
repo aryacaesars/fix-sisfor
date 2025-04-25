@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, FormEvent } from "react"
 import { useParams } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,24 @@ import { AnimatedSection } from "@/components/animated-section"
 import { Calendar, Clock, DollarSign, Users, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRBAC } from "@/hooks/use-rbac"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter, 
+  DialogDescription 
+} from "@/components/ui/dialog"
+import { 
+  Select, 
+  SelectTrigger, 
+  SelectValue, 
+  SelectContent, 
+  SelectItem 
+} from "@/components/ui/select"
 
 interface Project {
   id: string
@@ -24,14 +42,16 @@ interface Project {
 }
 
 export default function ProjectDetailPage() {
-  const params = useParams()
-  const projectId = params.id as string
+  const params = useParams() // Gunakan useParams untuk mendapatkan parameter dinamis
+  const projectId = params.id as string // Ambil id dari params
   const { toast } = useToast()
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
   
   const [project, setProject] = useState<Project | null>(null)
   const [isLoading2, setIsLoading2] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -66,6 +86,50 @@ export default function ProjectDetailPage() {
       fetchProject()
     }
   }, [projectId, toast])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!project) return
+    const { name, value } = e.target
+    setProject({ ...project, [name]: value })
+  }
+
+  const handleUpdateProject = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!project) return
+
+    setIsSaving(true)
+
+    try {
+      const response = await fetch(`/api/projects/${project.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(project),
+      })
+
+      if (!response.ok) throw new Error("Failed to update project")
+
+      const updatedProject = await response.json()
+      setProject(updatedProject)
+
+      toast({
+        title: "Success",
+        description: "Project updated successfully.",
+      })
+
+      setIsEditModalOpen(false) // Tutup modal setelah berhasil menyimpan
+    } catch (error) {
+      console.error("Error updating project:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update project.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   if (isLoading || isLoading2) {
     return (
@@ -225,11 +289,135 @@ export default function ProjectDetailPage() {
             >
               View Kanban Board
             </Button>
-            <Button variant="outline">Edit Project</Button>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Project</Button>
             <Button variant="destructive">Delete Project</Button>
           </CardFooter>
         </Card>
       </div>
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+  <DialogContent className="w-full max-w-screen-lg"> {/* Sesuaikan ukuran modal */}
+    <DialogHeader>
+      <DialogTitle>Edit Project</DialogTitle>
+      <DialogDescription>
+        Update the project details below. Changes will be saved immediately.
+      </DialogDescription>
+    </DialogHeader>
+    <form onSubmit={handleUpdateProject}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4"> {/* Grid layout untuk form */}
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="title" className="text-right">Project Name</Label>
+          <Input
+            id="title"
+            name="title"
+            value={project.title}
+            onChange={handleInputChange}
+            className="col-span-3"
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="clientName" className="text-right">Client Name</Label>
+          <Input
+            id="clientName"
+            name="clientName"
+            value={project.clientName}
+            onChange={handleInputChange}
+            className="col-span-3"
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-4 items-start gap-4">
+          <Label htmlFor="description" className="text-right pt-2">Description</Label>
+          <Textarea
+            id="description"
+            name="description"
+            value={project.description}
+            onChange={handleInputChange}
+            className="col-span-3"
+            rows={3}
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="startDate" className="text-right">Start Date</Label>
+          <Input
+            id="startDate"
+            name="startDate"
+            type="date"
+            value={project.startDate}
+            onChange={handleInputChange}
+            className="col-span-3"
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="endDate" className="text-right">Deadline</Label>
+          <Input
+            id="endDate"
+            name="endDate"
+            type="date"
+            value={project.endDate}
+            onChange={handleInputChange}
+            className="col-span-3"
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="budget" className="text-right">Budget ($)</Label>
+          <Input
+            id="budget"
+            name="budget"
+            type="number"
+            value={project.budget}
+            onChange={handleInputChange}
+            className="col-span-3"
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="status" className="text-right">Status</Label>
+          <Select 
+            value={project.status} 
+            onValueChange={(value) => setProject({ ...project, status: value })}
+          >
+            <SelectTrigger className="col-span-3">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="on-hold">On Hold</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="assignedTo" className="text-right">Assigned To</Label>
+          <Input
+            id="assignedTo"
+            name="assignedTo"
+            value={project.assignedTo}
+            onChange={handleInputChange}
+            className="col-span-3"
+            required
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="submit" disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Changes"}
+        </Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
     </AnimatedSection>
   )
 }

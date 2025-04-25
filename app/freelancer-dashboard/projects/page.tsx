@@ -48,15 +48,33 @@ export default function FreelancerProjectsPage() {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const [isManageMode, setIsManageMode] = useState(false) // State untuk mode Manage
 
-  // Fungsi untuk memformat tanggal
+  // Fungsi untuk memformat tanggal dengan handling error
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    if (!dateString) return "No date";
+    
+    try {
+      const date = new Date(dateString);
+      // Check if date is valid before formatting
+      if (isNaN(date.getTime())) {
+        return "Invalid date";
+      }
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch (error) {
+      return "Invalid date";
+    }
   };
 
-  // Fungsi untuk memformat mata uang
+  // Fungsi untuk memformat mata uang dengan handling error
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return "$0.00";
+    }
+    
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+    } catch (error) {
+      return "$0.00";
+    }
   };
 
   // Fetch projects from the API
@@ -140,8 +158,8 @@ export default function FreelancerProjectsPage() {
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
-      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      (project.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (project.clientName?.toLowerCase() || '').includes(searchTerm.toLowerCase())
 
     const matchesStatus = filterStatus ? project.status === filterStatus : true
 
@@ -187,7 +205,176 @@ export default function FreelancerProjectsPage() {
                   Fill in the project details. A Kanban board will be automatically created.
                 </DialogDescription>
               </DialogHeader>
-              {/* Form untuk membuat project */}
+              <form onSubmit={async (e: FormEvent) => {
+                e.preventDefault()
+                const formData = new FormData(e.target as HTMLFormElement)
+                
+                // Validate dates
+                const startDate = formData.get("startDate") as string;
+                const endDate = formData.get("endDate") as string;
+                
+                // Validate budget
+                const budgetStr = formData.get("budget") as string;
+                let budget: number;
+                try {
+                  budget = parseFloat(budgetStr);
+                  if (isNaN(budget)) throw new Error("Invalid budget");
+                } catch (error) {
+                  toast({
+                    title: "Invalid budget",
+                    description: "Please enter a valid number for budget",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
+                const projectData = {
+                  title: formData.get("title") as string,
+                  description: formData.get("description") as string,
+                  clientName: formData.get("clientName") as string,
+                  status: formData.get("status") as string,
+                  budget: budget,
+                  startDate: startDate,
+                  endDate: endDate,
+                  assignedTo: formData.get("assignedTo") as string,
+                }
+
+                try {
+                  const response = await fetch("/api/projects", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(projectData),
+                  })
+
+                  if (!response.ok) {
+                    throw new Error("Failed to create project")
+                  }
+
+                  const data = await response.json()
+                  setProjects([...projects, data])
+                  setIsModalOpen(false)
+                  toast({
+                    title: "Success",
+                    description: "Project created successfully",
+                  })
+                  
+                  // Refresh projects to ensure we have the correct data
+                  fetchProjects();
+                } catch (error) {
+                  console.error("Error creating project:", error)
+                  toast({
+                    title: "Error",
+                    description: "Failed to create project. Please try again.",
+                    variant: "destructive",
+                  })
+                }
+              }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="title" className="text-right">Project Name</Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      placeholder="Enter project title"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="clientName" className="text-right">Client Name</Label>
+                    <Input
+                      id="clientName"
+                      name="clientName"
+                      placeholder="Enter client name"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="description" className="text-right pt-2">Description</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Enter project details..."
+                      className="col-span-3"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="startDate" className="text-right">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      name="startDate"
+                      type="date"
+                      className="col-span-3"
+                      defaultValue={new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="endDate" className="text-right">Deadline</Label>
+                    <Input
+                      id="endDate"
+                      name="endDate"
+                      type="date"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="budget" className="text-right">Budget ($)</Label>
+                    <Input
+                      id="budget"
+                      name="budget"
+                      type="number"
+                      placeholder="Enter budget amount"
+                      min="0"
+                      step="0.01"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="status" className="text-right">Status</Label>
+                    <Select name="status" defaultValue="active">
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem key="active" value="active">Active</SelectItem>
+                        <SelectItem key="on-hold" value="on-hold">On Hold</SelectItem>
+                        <SelectItem key="completed" value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="assignedTo" className="text-right">Assigned To</Label>
+                    <Input
+                      id="assignedTo"
+                      name="assignedTo"
+                      placeholder="Enter name or email of assignee"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Create Project</Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -212,10 +399,10 @@ export default function FreelancerProjectsPage() {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="on-hold">On Hold</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem key="all" value="all">All</SelectItem>
+            <SelectItem key="active" value="active">Active</SelectItem>
+            <SelectItem key="on-hold" value="on-hold">On Hold</SelectItem>
+            <SelectItem key="completed" value="completed">Completed</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -228,7 +415,9 @@ export default function FreelancerProjectsPage() {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{project.title}</CardTitle>
                   <div className="flex gap-2 items-center">
-                    <div className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>{project.status}</div>
+                    <div className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>
+                      {project.status || "Unknown"}
+                    </div>
                     {isManageMode && (
                       <Button
                         variant="ghost"
@@ -244,10 +433,10 @@ export default function FreelancerProjectsPage() {
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{project.clientName}</p>
+                <p className="text-sm text-muted-foreground">{project.clientName || "No client"}</p>
               </CardHeader>
               <CardContent className="flex-grow">
-                <p className="text-sm mb-4">{project.description}</p>
+                <p className="text-sm mb-4">{project.description || "No description"}</p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -263,7 +452,7 @@ export default function FreelancerProjectsPage() {
                   </div>
                   <div className="flex items-center gap-1 col-span-2 mt-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Assigned to: {project.assignedTo}</span>
+                    <span>Assigned to: {project.assignedTo || "Unassigned"}</span>
                   </div>
                 </div>
               </CardContent>

@@ -140,8 +140,8 @@ export default function FreelancerProjectsPage() {
 
   const filteredProjects = projects.filter((project) => {
     const matchesSearch =
-      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      (project.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (project.clientName?.toLowerCase() || '').includes(searchTerm.toLowerCase())
 
     const matchesStatus = filterStatus ? project.status === filterStatus : true
 
@@ -187,7 +187,153 @@ export default function FreelancerProjectsPage() {
                   Fill in the project details. A Kanban board will be automatically created.
                 </DialogDescription>
               </DialogHeader>
-              {/* Form untuk membuat project */}
+              <form onSubmit={async (e: FormEvent) => {
+                e.preventDefault()
+                const formData = new FormData(e.target as HTMLFormElement)
+                const projectData = {
+                  title: formData.get("title") as string,
+                  description: formData.get("description") as string,
+                  clientName: formData.get("clientName") as string,
+                  status: formData.get("status") as string,
+                  budget: parseFloat(formData.get("budget") as string),
+                  startDate: formData.get("startDate") as string,
+                  endDate: formData.get("endDate") as string,
+                  assignedTo: formData.get("assignedTo") as string,
+                }
+
+                try {
+                  const response = await fetch("/api/projects", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(projectData),
+                  })
+
+                  if (!response.ok) {
+                    throw new Error("Failed to create project")
+                  }
+
+                  const data = await response.json()
+                  setProjects([...projects, data])
+                  setIsModalOpen(false)
+                  toast({
+                    title: "Success",
+                    description: "Project created successfully",
+                  })
+                } catch (error) {
+                  console.error("Error creating project:", error)
+                  toast({
+                    title: "Error",
+                    description: "Failed to create project. Please try again.",
+                    variant: "destructive",
+                  })
+                }
+              }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="title" className="text-right">Project Name</Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      placeholder="Enter project title"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="clientName" className="text-right">Client Name</Label>
+                    <Input
+                      id="clientName"
+                      name="clientName"
+                      placeholder="Enter client name"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="description" className="text-right pt-2">Description</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Enter project details..."
+                      className="col-span-3"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="startDate" className="text-right">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      name="startDate"
+                      type="date"
+                      className="col-span-3"
+                      defaultValue={new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="endDate" className="text-right">Deadline</Label>
+                    <Input
+                      id="endDate"
+                      name="endDate"
+                      type="date"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="budget" className="text-right">Budget ($)</Label>
+                    <Input
+                      id="budget"
+                      name="budget"
+                      type="number"
+                      placeholder="Enter budget amount"
+                      min="0"
+                      step="0.01"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="status" className="text-right">Status</Label>
+                    <Select name="status" defaultValue="active">
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem key="active" value="active">Active</SelectItem>
+                        <SelectItem key="on-hold" value="on-hold">On Hold</SelectItem>
+                        <SelectItem key="completed" value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="assignedTo" className="text-right">Assigned To</Label>
+                    <Input
+                      id="assignedTo"
+                      name="assignedTo"
+                      placeholder="Enter name or email of assignee"
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Create Project</Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -212,10 +358,10 @@ export default function FreelancerProjectsPage() {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="on-hold">On Hold</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem key="all" value="all">All</SelectItem>
+            <SelectItem key="active" value="active">Active</SelectItem>
+            <SelectItem key="on-hold" value="on-hold">On Hold</SelectItem>
+            <SelectItem key="completed" value="completed">Completed</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -27,6 +27,7 @@ import {
   SelectContent, 
   SelectItem 
 } from "@/components/ui/select"
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
 
 interface Project {
   id: string
@@ -130,6 +131,30 @@ export default function ProjectDetailPage() {
       setIsSaving(false)
     }
   }
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/projects/${project.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete project");
+      toast({
+        title: "Project deleted",
+        description: "The project has been deleted.",
+      });
+      window.location.href = "/freelancer-dashboard/projects";
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete project.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (isLoading || isLoading2) {
     return (
@@ -290,7 +315,25 @@ export default function ProjectDetailPage() {
               View Kanban Board
             </Button>
             <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Project</Button>
-            <Button variant="destructive">Delete Project</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isSaving}>
+                  {isSaving ? "Deleting..." : "Delete Project"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                </AlertDialogHeader>
+                <p>Are you sure you want to delete this project? This action cannot be undone.</p>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteProject} disabled={isSaving}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardFooter>
         </Card>
       </div>

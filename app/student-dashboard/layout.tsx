@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, BookOpen, LayoutGrid, FileText, Settings, User } from "lucide-react"
+import { Home, BookOpen, LayoutGrid, FileText, Settings, User, GraduationCap } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 
 // Define navigation items once in the layout
@@ -19,6 +19,11 @@ const studentNavItems = [
     title: "Assignments",
     href: "/student-dashboard/assignments",
     icon: <BookOpen className="h-5 w-5" />,
+  },
+  {
+    title: "Courses",
+    href: "/student-dashboard/courses",
+    icon: <GraduationCap className="h-5 w-5" />,
   },
   {
     title: "Form Templates",

@@ -42,6 +42,13 @@ import {
   Building2,
   User2
 } from "lucide-react"
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Course {
   id: string
@@ -54,6 +61,9 @@ interface Course {
     startTime: string
     endTime: string
   }[]
+  userId: string
+  createdAt: string
+  updatedAt: string
 }
 
 export default function CoursesPage() {
@@ -69,7 +79,17 @@ export default function CoursesPage() {
   const [isEditMode, setIsEditMode] = useState(false)
   
   // New course form state
-  const [newCourse, setNewCourse] = useState({
+  const [newCourse, setNewCourse] = useState<{
+    name: string;
+    code: string;
+    lecturer: string;
+    room: string;
+    schedule: Array<{
+      day: string;
+      startTime: string;
+      endTime: string;
+    }>;
+  }>({
     name: "",
     code: "",
     lecturer: "",
@@ -128,19 +148,52 @@ export default function CoursesPage() {
         })
         return
       }
+
+      // Validate schedule
+      if (!newCourse.schedule || newCourse.schedule.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please add at least one schedule",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Validate each schedule entry
+      const invalidSchedule = newCourse.schedule.some(sched => 
+        !sched?.day || !sched?.startTime || !sched?.endTime
+      )
+
+      if (invalidSchedule) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all schedule fields",
+          variant: "destructive"
+        })
+        return
+      }
       
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newCourse),
+        body: JSON.stringify({
+          name: newCourse.name,
+          code: newCourse.code,
+          lecturer: newCourse.lecturer,
+          room: newCourse.room || null,
+          schedule: newCourse.schedule
+        }),
       })
       
-      if (!response.ok) throw new Error('Failed to create course')
+      const responseData = await response.json()
       
-      const data = await response.json()
-      setCourses([...courses, data])
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to create course')
+      }
+      
+      setCourses([...courses, responseData])
       setIsModalOpen(false)
       setNewCourse({
         name: "",
@@ -162,7 +215,7 @@ export default function CoursesPage() {
       console.error("Error creating course:", error)
       toast({
         title: "Error",
-        description: "Failed to create course",
+        description: error instanceof Error ? error.message : "Failed to create course",
         variant: "destructive"
       })
     }
@@ -201,12 +254,19 @@ export default function CoursesPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(course),
+        body: JSON.stringify({
+          name: course.name,
+          code: course.code,
+          lecturer: course.lecturer,
+          room: course.room || null,
+          schedule: course.schedule
+        }),
       })
       
       if (!response.ok) throw new Error('Failed to update course')
       
-      setCourses(courses.map(c => c.id === course.id ? course : c))
+      const updatedCourse = await response.json()
+      setCourses(courses.map(c => c.id === course.id ? updatedCourse : c))
       setSelectedCourse(null)
       setIsEditMode(false)
       
@@ -308,24 +368,23 @@ export default function CoursesPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <User2 className="h-4 w-4 text-muted-foreground" />
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm">Lecturer</h4>
                     <span>{course.lecturer}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span>{course.room || "No room assigned"}</span>
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm">Room</h4>
+                    <span>{course.room}</span>
                   </div>
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm">Schedule</h4>
-                    {course.schedule.map((sched, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{sched.day}</span>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{sched.startTime} - {sched.endTime}</span>
-                      </div>
-                    ))}
+                    <div className="space-y-1">
+                      {course.schedule.map((s, index) => (
+                        <div key={index} className="text-sm">
+                          {s.day} - {s.startTime} to {s.endTime}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -412,29 +471,41 @@ export default function CoursesPage() {
             </div>
             <div className="space-y-2">
               <Label>Schedule</Label>
-              {(isEditMode ? selectedCourse?.schedule : newCourse.schedule).map((sched, index) => (
+              {(isEditMode ? selectedCourse?.schedule || [] : newCourse.schedule).map((sched, index) => (
                 <div key={index} className="grid grid-cols-3 gap-2">
-                  <Input
-                    placeholder="Day"
+                  <Select
                     value={sched.day}
-                    onChange={(e) => {
+                    onValueChange={(value) => {
                       if (isEditMode && selectedCourse) {
-                        const newSchedule = [...selectedCourse.schedule]
-                        newSchedule[index].day = e.target.value
+                        const newSchedule = [...(selectedCourse.schedule || [])]
+                        newSchedule[index].day = value
                         setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
                       } else {
                         const newSchedule = [...newCourse.schedule]
-                        newSchedule[index].day = e.target.value
+                        newSchedule[index].day = value
                         setNewCourse({ ...newCourse, schedule: newSchedule })
                       }
                     }}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monday">Monday</SelectItem>
+                      <SelectItem value="tuesday">Tuesday</SelectItem>
+                      <SelectItem value="wednesday">Wednesday</SelectItem>
+                      <SelectItem value="thursday">Thursday</SelectItem>
+                      <SelectItem value="friday">Friday</SelectItem>
+                      <SelectItem value="saturday">Saturday</SelectItem>
+                      <SelectItem value="sunday">Sunday</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Input
                     type="time"
                     value={sched.startTime}
                     onChange={(e) => {
                       if (isEditMode && selectedCourse) {
-                        const newSchedule = [...selectedCourse.schedule]
+                        const newSchedule = [...(selectedCourse.schedule || [])]
                         newSchedule[index].startTime = e.target.value
                         setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
                       } else {
@@ -449,7 +520,7 @@ export default function CoursesPage() {
                     value={sched.endTime}
                     onChange={(e) => {
                       if (isEditMode && selectedCourse) {
-                        const newSchedule = [...selectedCourse.schedule]
+                        const newSchedule = [...(selectedCourse.schedule || [])]
                         newSchedule[index].endTime = e.target.value
                         setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
                       } else {
@@ -461,6 +532,25 @@ export default function CoursesPage() {
                   />
                 </div>
               ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (isEditMode && selectedCourse) {
+                    setSelectedCourse({
+                      ...selectedCourse,
+                      schedule: [...(selectedCourse.schedule || []), { day: "", startTime: "", endTime: "" }]
+                    })
+                  } else {
+                    setNewCourse({
+                      ...newCourse,
+                      schedule: [...newCourse.schedule, { day: "", startTime: "", endTime: "" }]
+                    })
+                  }
+                }}
+              >
+                Add Schedule
+              </Button>
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">

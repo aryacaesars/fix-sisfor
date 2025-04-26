@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 
 export async function PUT(
@@ -7,27 +8,44 @@ export async function PUT(
   { params }: { params: { courseId: string } }
 ) {
   try {
-    const { userId } = auth()
-    const values = await req.json()
+    const session = await getServerSession(authOptions)
+    const { name, code, lecturer, room, schedule } = await req.json()
 
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 })
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    if (!name || !code || !lecturer) {
+      return NextResponse.json(
+        { error: "Name, code, and lecturer are required" },
+        { status: 400 }
+      )
     }
 
     const course = await db.course.update({
       where: {
         id: params.courseId,
-        userId,
+        userId: session.user.id,
       },
       data: {
-        ...values,
+        name,
+        code,
+        lecturer,
+        room,
+        schedule,
       },
     })
 
     return NextResponse.json(course)
   } catch (error) {
     console.error("[COURSE_PUT]", error)
-    return new NextResponse("Internal error", { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
 
@@ -36,22 +54,28 @@ export async function DELETE(
   { params }: { params: { courseId: string } }
 ) {
   try {
-    const { userId } = auth()
+    const session = await getServerSession(authOptions)
 
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 })
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
     }
 
     const course = await db.course.delete({
       where: {
         id: params.courseId,
-        userId,
+        userId: session.user.id,
       },
     })
 
     return NextResponse.json(course)
   } catch (error) {
     console.error("[COURSE_DELETE]", error)
-    return new NextResponse("Internal error", { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 } 

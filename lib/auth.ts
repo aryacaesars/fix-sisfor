@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!user.emailVerified) {
-          throw new Error("Email belum diverifikasi")
+          throw new Error("Email not verified")
         }
 
         const isCorrectPassword = await bcrypt.compare(credentials.password, user.hashedPassword)

@@ -82,7 +82,7 @@ export default function LoginPage() {
           setIsLoading(false)
           return
         }
-        setError(data.error || "Login gagal")
+        setError(data.error || "Failed to login")
         setIsLoading(false)
         return
       }
@@ -90,14 +90,14 @@ export default function LoginPage() {
       const loginResult = await login(formData.email, formData.password)
       if (loginResult.success) {
         toast({
-          title: "Login berhasil",
-          description: "Selamat datang kembali!",
+          title: "Login Success",
+          description: "Welcome back!",
         })
       } else {
         setError(loginResult.message)
       }
     } catch (err) {
-      setError("Terjadi kesalahan saat login")
+      setError("An error occurred while logging in")
     } finally {
       setIsLoading(false)
     }

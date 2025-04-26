@@ -29,14 +29,14 @@ export default function VerifyEmailPage() {
 
     if (token) {
       setVerificationStatus("loading")
-      setStatusMessage("Memverifikasi email Anda...")
+      setStatusMessage("Verifying your email...")
 
       // Panggil API verifikasi
       fetch(`/api/verify-email?token=${token}`)
         .then(async (response) => {
           if (response.ok || response.redirected) {
             setVerificationStatus("success")
-            setStatusMessage("Email berhasil diverifikasi! Anda akan dialihkan ke halaman login.")
+            setStatusMessage("Email successfully verified! You will be redirected to the login page.")
 
             // Redirect ke halaman login setelah beberapa detik
             setTimeout(() => {
@@ -44,15 +44,15 @@ export default function VerifyEmailPage() {
             }, 3000)
           } else {
             const data = await response.json()
-            throw new Error(data.error || "Gagal memverifikasi email")
+            throw new Error(data.error || "Failed to verify email")
           }
         })
         .catch((error) => {
           setVerificationStatus("error")
-          setStatusMessage(error.message || "Terjadi kesalahan saat memverifikasi email")
+          setStatusMessage(error.message || "An error occurred while verifying email")
           toast({
-            title: "Verifikasi gagal",
-            description: error.message || "Terjadi kesalahan saat memverifikasi email",
+            title: "Verification failed",
+            description: error.message || "An error occurred while verifying email",
             variant: "destructive",
           })
         })

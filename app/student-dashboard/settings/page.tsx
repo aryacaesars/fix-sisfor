@@ -39,6 +39,13 @@ export default function StudentSettingsPage() {
     fetchSettings()
   }, [])
 
+  // Redirect unauthorized
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      window.location.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized])
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">

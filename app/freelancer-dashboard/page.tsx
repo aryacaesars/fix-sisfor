@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button"
 import { RoleBasedCalendar } from "@/components/role-based-calendar"
 import { useToast } from "@/hooks/use-toast"
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 
 export default function FreelancerDashboard() {
   const { isAuthorized, isLoading, user } = useRBAC(["freelancer"])
@@ -21,6 +22,12 @@ export default function FreelancerDashboard() {
   const [isDataLoading, setIsDataLoading] = useState(true)
   const [selectedProjectForDialog, setSelectedProjectForDialog] = useState<any>(null); // State for Upcoming Deadlines dialog
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      router.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized, router])
 
   useEffect(() => {
     // Check authorization as before
@@ -130,7 +137,10 @@ export default function FreelancerDashboard() {
           </CardHeader>
           <CardContent className="flex-grow">
             {isDataLoading ? (
-              <p className="text-sm text-muted-foreground">Loading projects...</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading projects...</p>
+              </div>
             ) : activeProjects.length > 0 ? (
               <ul className="space-y-1 text-sm">
                 {activeProjects.slice(0, 3).map((project) => (
@@ -146,16 +156,21 @@ export default function FreelancerDashboard() {
                 {activeProjects.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {activeProjects.length - 3} more</li>}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No active projects found.</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <p className="text-sm text-muted-foreground">No active projects found.</p>
+              </div>
             )}
           </CardContent>
           <CardFooter>
-             <Link href="/freelancer-dashboard/projects" className="w-full">
-                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <span>View All Projects</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+            <Link href="/freelancer-dashboard/projects" className="w-full">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                <span>View All Projects</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         </Card>
 
@@ -167,7 +182,10 @@ export default function FreelancerDashboard() {
           </CardHeader>
           <CardContent className="flex-grow">
             {isDataLoading ? (
-              <p className="text-sm text-muted-foreground">Loading templates...</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading templates...</p>
+              </div>
             ) : templates.length > 0 ? (
               <ul className="space-y-1 text-sm">
                 {templates.slice(0, 3).map((template) => (
@@ -183,7 +201,12 @@ export default function FreelancerDashboard() {
                 {templates.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {templates.length - 3} more</li>}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No templates found.</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <p className="text-sm text-muted-foreground">No templates found.</p>
+              </div>
             )}
           </CardContent>
           <CardFooter>
@@ -203,47 +226,247 @@ export default function FreelancerDashboard() {
             <CardDescription>Your nearest project milestones</CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
-             {isDataLoading ? (
-               <p className="text-sm text-muted-foreground">Loading deadlines...</p>
-             ) : upcomingDeadlines.length > 0 ? (
-                <ul className="space-y-1 text-sm">
-                  {upcomingDeadlines
-                    .slice(0, 3)
-                    .map((project) => (
-                      <li
-                        key={project.id}
-                        className="flex justify-between items-center p-2 rounded hover:bg-accent cursor-pointer transition-colors"
-                        onClick={() => setSelectedProjectForDialog(project)} // Open dialog on click
-                      >
-                        <div className="flex items-center gap-2">
-                           <div className={`w-2 h-2 rounded-full ${
-                            project.status === 'completed' ? 'bg-green-500' :
-                            project.status === 'active' ? 'bg-yellow-500' :
-                            project.status === 'on-hold' ? 'bg-red-500' :
-                            'bg-gray-500'
-                          }`}></div>
-                          <span className="truncate font-medium">{project.title}</span>
-                        </div>
-                        <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">
-                          {formatDate(project.endDate)}
-                        </span>
-                      </li>
-                    ))}
-                   {upcomingDeadlines.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {upcomingDeadlines.length - 3} more</li>}
-                </ul>
-             ) : (
-               <p className="text-sm text-muted-foreground text-center py-4">No upcoming deadlines.</p>
-             )}
+            {isDataLoading ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading deadlines...</p>
+              </div>
+            ) : projects.length > 0 && projects.every(p => p.status === 'completed') ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-sm text-muted-foreground">All projects completed!</p>
+              </div>
+            ) : upcomingDeadlines.length > 0 ? (
+              <ul className="space-y-1 text-sm">
+                {upcomingDeadlines.slice(0, 3).map((project) => (
+                  <li
+                    key={project.id}
+                    className="flex justify-between items-center p-2 rounded hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => setSelectedProjectForDialog(project)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        project.status === 'completed' ? 'bg-green-500' :
+                        project.status === 'active' ? 'bg-yellow-500' :
+                        project.status === 'on-hold' ? 'bg-red-500' :
+                        'bg-gray-500'
+                      }`}></div>
+                      <span className="truncate font-medium">{project.title}</span>
+                    </div>
+                    <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">
+                      {formatDate(project.endDate)}
+                    </span>
+                  </li>
+                ))}
+                {upcomingDeadlines.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {upcomingDeadlines.length - 3} more</li>}
+              </ul>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <p className="text-sm text-muted-foreground">No upcoming deadlines.</p>
+              </div>
+            )}
           </CardContent>
-           <CardFooter>
-             <Link href="/freelancer-dashboard/projects" className="w-full">
-                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <span>View All Deadlines</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+          <CardFooter>
+            <Link href="/freelancer-dashboard/projects" className="w-full">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                <span>View All Deadlines</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         </Card>
+      </div>
+
+      {/* Project Summary and Recent Templates cards */}
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
+         {/* Project Summary Card */}
+         <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
+           <CardHeader className="pb-2">
+             <CardTitle>Project Summary</CardTitle>
+             <CardDescription>Overview of your project status</CardDescription>
+           </CardHeader>
+           <CardContent className="flex-grow p-4">
+              {isDataLoading ? (
+                <div className="flex items-center justify-center flex-grow">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : projects.length > 0 ? (
+                <div className="flex flex-col justify-center h-full">
+                  <div className="relative" style={{ height: "220px" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Completed', value: projects.filter(p => p.status === 'completed').length, color: '#16a34a' },
+                            { name: 'Active', value: projects.filter(p => p.status === 'active').length, color: '#eab308' },
+                            { name: 'On Hold', value: projects.filter(p => p.status === 'on-hold').length, color: '#ef4444' }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={70}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {[
+                            { name: 'Completed', color: '#16a34a' },
+                            { name: 'Active', color: '#eab308' },
+                            { name: 'On Hold', color: '#ef4444' }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-28">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">Total Earnings</p>
+                      <p className="font-semibold text-green-600 text-xs">
+                        {new Intl.NumberFormat('id-ID', {
+                          style: 'currency',
+                          currency: 'IDR',
+                          minimumFractionDigits: 0
+                        }).format(
+                          projects
+                            .filter(p => p.status === 'completed')
+                            .reduce((total, project) => total + (project.budget || 0), 0)
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="border-t pt-3 mt-auto">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Average per Project:</span> 
+                      <span className="font-medium">
+                        {new Intl.NumberFormat('id-ID', {
+                          style: 'currency',
+                          currency: 'IDR',
+                          minimumFractionDigits: 0
+                        }).format(
+                          projects.filter(p => p.status === 'completed').length > 0
+                            ? projects
+                                .filter(p => p.status === 'completed')
+                                .reduce((total, project) => total + (project.budget || 0), 0) /
+                                projects.filter(p => p.status === 'completed').length
+                            : 0
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center flex-grow">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <p className="text-sm text-muted-foreground">No project data available.</p>
+                </div>
+              )}
+           </CardContent>
+         </Card>
+
+         {/* Project Status Card */}
+         <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
+           <CardHeader>
+             <CardTitle>Project Status</CardTitle>
+             <CardDescription>Overview of your project progress</CardDescription>
+           </CardHeader>
+           <CardContent className="flex-grow">
+              {isDataLoading ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading status...</p>
+                </div>
+              ) : projects.length > 0 ? (
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-foreground font-medium flex items-center">
+                        <div className="w-3 h-3 bg-green-600 rounded-full mr-2"></div>
+                        Completed
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {projects.filter(p => p.status === 'completed').length}/{projects.length}
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-green-600 rounded-full transition-all duration-500" 
+                        style={{ 
+                          width: projects.length ? 
+                            `${(projects.filter(p => p.status === 'completed').length / projects.length) * 100}%` : 
+                            "0%" 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-foreground font-medium flex items-center">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                        Active
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {projects.filter(p => p.status === 'active').length}/{projects.length}
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-yellow-500 rounded-full transition-all duration-500" 
+                        style={{ 
+                          width: projects.length ? 
+                            `${(projects.filter(p => p.status === 'active').length / projects.length) * 100}%` : 
+                            "0%" 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-foreground font-medium flex items-center">
+                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                        On Hold
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {projects.filter(p => p.status === 'on-hold').length}/{projects.length}
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-red-500 rounded-full transition-all duration-500" 
+                        style={{ 
+                          width: projects.length ? 
+                            `${(projects.filter(p => p.status === 'on-hold').length / projects.length) * 100}%` : 
+                            "0%" 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <p className="text-sm text-muted-foreground">No project data available.</p>
+                </div>
+              )}
+           </CardContent>
+           <CardFooter>
+             <Link href="/freelancer-dashboard/projects" className="w-full">
+               <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                 <span>View All Projects</span>
+                 <ArrowRight className="h-4 w-4" />
+               </Button>
+             </Link>
+           </CardFooter>
+         </Card>
       </div>
 
       {/* Calendar Card */}
@@ -264,105 +487,6 @@ export default function FreelancerDashboard() {
   </CardContent>
 </Card>
       </div>
-
-      {/* Project Summary and Recent Templates cards */}
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
-         {/* Project Summary Card */}
-         <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
-           <CardHeader>
-             <CardTitle>Project Summary</CardTitle>
-             <CardDescription>Overview of your earnings</CardDescription>
-           </CardHeader>
-           <CardContent className="flex-grow">
-              {isDataLoading ? (
-                <p className="text-sm text-muted-foreground">Loading summary...</p>
-              ) : projects.length > 0 ? (
-                <div className="text-sm space-y-2">
-                   <div className="flex justify-between">
-                     <span>Total Earnings:</span> 
-                     <span className="font-medium text-green-600">
-                       {new Intl.NumberFormat('id-ID', {
-                         style: 'currency',
-                         currency: 'IDR',
-                         minimumFractionDigits: 0
-                       }).format(
-                         projects
-                           .filter(p => p.status === 'completed')
-                           .reduce((total, project) => total + (project.budget || 0), 0)
-                       )}
-                     </span>
-                   </div>
-                   <div className="flex justify-between">
-                     <span>Completed Projects:</span> 
-                     <span className="font-medium">
-                       {projects.filter(p => p.status === 'completed').length}
-                     </span>
-                   </div>
-                   <div className="flex justify-between">
-                     <span>Average per Project:</span> 
-                     <span className="font-medium">
-                       {new Intl.NumberFormat('id-ID', {
-                         style: 'currency',
-                         currency: 'IDR',
-                         minimumFractionDigits: 0
-                       }).format(
-                         projects.filter(p => p.status === 'completed').length > 0
-                           ? projects
-                               .filter(p => p.status === 'completed')
-                               .reduce((total, project) => total + (project.budget || 0), 0) /
-                               projects.filter(p => p.status === 'completed').length
-                           : 0
-                       )}
-                     </span>
-                   </div>
-                </div>
-              ) : (
-                 <p className="text-sm text-muted-foreground text-center py-4">No project data available.</p>
-              )}
-           </CardContent>
-         </Card>
-
-         {/* Recent Templates Card */}
-         <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
-           <CardHeader>
-             <CardTitle>Recent Templates</CardTitle>
-             <CardDescription>Your most recent form templates</CardDescription>
-           </CardHeader>
-           <CardContent className="flex-grow">
-              {isDataLoading ? (
-                <p className="text-sm text-muted-foreground">Loading templates...</p>
-              ) : templates.length > 0 ? (
-                <ul className="space-y-1 text-sm">
-                  {templates.slice(0, 3).map((template) => (
-                     <li
-                       key={template.id}
-                       className="flex items-center justify-between p-2 rounded hover:bg-accent cursor-pointer transition-colors"
-                       onClick={() => openTemplateLink(template.link)} // Use safe link opener
-                     >
-                       <div className="flex items-center gap-2">
-                         <FileText className="h-4 w-4 text-primary flex-shrink-0" />
-                         <span className="truncate font-medium">{template.title}</span>
-                       </div>
-                       <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">{template.category}</span>
-                     </li>
-                  ))}
-                  {templates.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {templates.length - 3} more</li>}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No recent templates found.</p>
-              )}
-           </CardContent>
-            <CardFooter>
-             <Link href="/freelancer-dashboard/form-templates" className="w-full">
-                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <span>View All Templates</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-          </CardFooter>
-         </Card>
-      </div>
-
        {/* Dialog for Upcoming Deadlines Card */}
       <Dialog open={selectedProjectForDialog !== null} onOpenChange={(open) => !open && setSelectedProjectForDialog(null)}>
         <DialogContent className="max-w-md">

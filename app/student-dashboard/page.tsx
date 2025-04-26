@@ -262,14 +262,6 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-    // Check if user is authenticated but not authorized (wrong role)
-    if (!isLoading && !isAuthorized && localStorage.getItem("auth-status") === "authenticated") {
-      // They're logged in but with the wrong role
-      router.push("/unauthorized")
-    }
-  }, [isLoading, isAuthorized, router])
-
-  useEffect(() => {
     if (!isDataLoading && assignments.length > 0 && user?.id) {
       const today = new Date("2025-04-19"); // gunakan tanggal context
       assignments.forEach((assignment: any) => {

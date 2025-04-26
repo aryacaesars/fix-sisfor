@@ -49,7 +49,7 @@ export default function StudentKanbanPage() {
         description: "Only students can access this page."
       })
       // Make sure this path is correct
-      router.push("/auth/login")
+      router.push("/unauthorized")
     }
   }, [authLoading, isAuthorized, router, toast])
   

@@ -35,6 +35,7 @@ export default function KanbanDashboardPage() {
   
   const [projectBoards, setProjectBoards] = useState<ProjectBoard[]>([])
   const [recentBoards, setRecentBoards] = useState<ProjectBoard[]>([])
+  const [completedBoards, setCompletedBoards] = useState<ProjectBoard[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [favorites, setFavorites] = useState<string[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
@@ -61,10 +62,16 @@ export default function KanbanDashboardPage() {
       
       const data = await response.json()
       console.log("Fetched boards:", data);
-      setProjectBoards(data || [])
+      
+      // Separate completed boards
+      const activeBoards = data.filter((board: ProjectBoard) => board.project.status !== "completed")
+      const completedBoardsList = data.filter((board: ProjectBoard) => board.project.status === "completed")
+      
+      setProjectBoards(activeBoards)
+      setCompletedBoards(completedBoardsList)
       
       // Set recent boards (last 5 accessed)
-      const recent = Array.isArray(data) ? [...data].sort((a, b) => 
+      const recent = Array.isArray(activeBoards) ? [...activeBoards].sort((a, b) => 
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       ).slice(0, 5) : [];
       
@@ -80,6 +87,7 @@ export default function KanbanDashboardPage() {
       setIsLoaded(true)
       setProjectBoards([])
       setRecentBoards([])
+      setCompletedBoards([])
     }
   }
   
@@ -262,6 +270,79 @@ export default function KanbanDashboardPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {completedBoards.length > 0 && (
+        <>
+          <div className="border-t border-border my-8"></div>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Completed Projects</h2>
+            <p className="text-sm text-muted-foreground">Projects that have been marked as completed</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {completedBoards.map((board) => (
+              <Card key={board.id} className="bg-muted/50">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg truncate">{board.project.title}</CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        toggleFavorite(board.id)
+                      }}
+                      className="h-8 w-8"
+                    >
+                      {favorites.includes(board.id) ? (
+                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                      ) : (
+                        <StarOff className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <CardDescription className="truncate">
+                    {board.description || "Kanban board for this project"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <Badge className="bg-green-500 text-white">
+                        Completed
+                      </Badge>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{getRelativeTime(board.updatedAt)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-1 mt-1">
+                      {board.project.clientName && (
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-medium">Client:</span> {board.project.clientName}
+                        </div>
+                      )}
+                      {board.project.endDate && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>Completed: {new Date(board.project.endDate).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <Link href={`/freelancer-dashboard/kanban/${board.id}`} className="w-full">
+                    <Button variant="default" size="sm" className="w-full">
+                      View Completed Board
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
       
       {projectBoards.length > 0 && (
         <div className="mb-8">

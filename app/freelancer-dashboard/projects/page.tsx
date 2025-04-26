@@ -12,6 +12,8 @@ import {
   Clock,
   Calendar,
   Users,
+  Eye,
+  Kanban,
 } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -181,7 +183,7 @@ export default function FreelancerProjectsPage() {
 
   return (
     <AnimatedSection>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Projects</h1>
         <div className="flex gap-4">
           <Button
@@ -268,7 +270,7 @@ export default function FreelancerProjectsPage() {
                   })
                 }
               }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="title" className="text-right">Project Name</Label>
                     <Input
@@ -298,7 +300,7 @@ export default function FreelancerProjectsPage() {
                       name="description"
                       placeholder="Enter project details..."
                       className="col-span-3"
-                      rows={3}
+                      rows={4}
                     />
                   </div>
                   
@@ -368,7 +370,7 @@ export default function FreelancerProjectsPage() {
                   </div>
                 </div>
                 
-                <DialogFooter>
+                <DialogFooter className="mt-4">
                   <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                     Cancel
                   </Button>
@@ -380,12 +382,12 @@ export default function FreelancerProjectsPage() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search projects or clients..."
-            className="pl-9"
+            className="pl-9 h-11"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -394,7 +396,7 @@ export default function FreelancerProjectsPage() {
           value={filterStatus || "all"}
           onValueChange={(value) => setFilterStatus(value === "all" ? null : value)}
         >
-          <SelectTrigger className="flex gap-2 w-48">
+          <SelectTrigger className="flex gap-2 w-48 h-11">
             <Filter className="h-4 w-4" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -407,15 +409,15 @@ export default function FreelancerProjectsPage() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {filteredProjects.length > 0 ? (
           filteredProjects.map((project) => (
-            <Card key={project.id} className="transition-all duration-300 hover:shadow-md flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{project.title}</CardTitle>
-                  <div className="flex gap-2 items-center">
-                    <div className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>
+            <Card key={project.id} className="transition-all duration-300 hover:shadow-lg flex flex-col h-full w-full max-w-full">
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-xl truncate">{project.title}</CardTitle>
+                  <div className="flex gap-2 items-center shrink-0">
+                    <div className={`px-3 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)} whitespace-nowrap`}>
                       {project.status || "Unknown"}
                     </div>
                     {isManageMode && (
@@ -423,7 +425,7 @@ export default function FreelancerProjectsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDeleteProject(project)}
-                        className="text-red-500 hover:bg-red-50"
+                        className="text-red-500 hover:bg-red-50 shrink-0"
                         title="Delete Project"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -433,64 +435,68 @@ export default function FreelancerProjectsPage() {
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{project.clientName || "No client"}</p>
+                <p className="text-sm text-muted-foreground mt-1 truncate">{project.clientName || "No client"}</p>
               </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-sm mb-4">{project.description || "No description"}</p>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDate(project.startDate)}</span>
+              <CardContent className="flex-grow pb-6">
+                <p className="text-sm mb-6 line-clamp-3 break-words">{project.description || "No description"}</p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{formatDate(project.startDate)}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDate(project.endDate)}</span>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{formatDate(project.endDate)}</span>
                   </div>
-                  <div className="flex items-center gap-1 col-span-2">
-                    <span className="text-muted-foreground font-medium">Rp</span>
-                    <span>{formatCurrency(project.budget).replace('Rp', '')}</span>
+                  <div className="flex items-center gap-2 col-span-2">
+                    <span className="text-muted-foreground font-medium shrink-0">Rp</span>
+                    <span className="truncate">{formatCurrency(project.budget).replace('Rp', '')}</span>
                   </div>
-                  <div className="flex items-center gap-1 col-span-2 mt-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Assigned to: {project.assignedTo || "Unassigned"}</span>
+                  <div className="flex items-center gap-2 col-span-2 mt-2">
+                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">Assigned to: {project.assignedTo || "Unassigned"}</span>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-wrap gap-2 justify-end">
-                <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref>
-                  <Button variant="outline" size="sm" className="flex-1 md:flex-none">
-                    Details
+              <CardFooter className="pt-4 border-t">
+                <div className="flex gap-3 w-full">
+                  <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Eye className="h-3.5 w-3.5 mr-1" />
+                      View Details
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      if (project.kanbanBoardId) {
+                        window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
+                      } else {
+                        toast({
+                          title: "No Kanban board",
+                          description: "This project doesn't have a Kanban board associated with it.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    <Kanban className="h-3.5 w-3.5 mr-1" />
+                    View Kanban
                   </Button>
-                </Link>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="flex-1 md:flex-none"
-                  onClick={() => {
-                    if (project.kanbanBoardId) {
-                      window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
-                    } else {
-                      toast({
-                        title: "No Kanban board",
-                        description: "This project doesn't have a Kanban board associated with it.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                >
-                  View Kanban
-                </Button>
+                </div>
               </CardFooter>
             </Card>
           ))
         ) : (
-          <div className="text-center col-span-full">
+          <div className="text-center col-span-full py-12">
             {searchTerm ? (
-              <p className="text-muted-foreground">No projects match your search term.</p>
+              <p className="text-muted-foreground text-lg">No projects match your search term.</p>
             ) : filterStatus ? (
-              <p className="text-muted-foreground">No projects match the selected filter.</p>
+              <p className="text-muted-foreground text-lg">No projects match the selected filter.</p>
             ) : (
-              <p className="text-muted-foreground">No projects available.</p>
+              <p className="text-muted-foreground text-lg">No projects available.</p>
             )}
           </div>
         )}

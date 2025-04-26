@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { Dialog as AlertDialog, DialogContent as AlertDialogContent, DialogHeader as AlertDialogHeader, DialogTitle as AlertDialogTitle, DialogFooter as AlertDialogFooter } from "@/components/ui/dialog"
+import { useRouter } from "next/navigation"
 
 interface Project {
   id: string
@@ -40,6 +41,7 @@ interface Project {
 export default function FreelancerProjectsPage() {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
   const { toast } = useToast()
+  const router = useRouter()
 
   const [projects, setProjects] = useState<Project[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -48,6 +50,8 @@ export default function FreelancerProjectsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
   const [isManageMode, setIsManageMode] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "No date";
@@ -82,46 +86,39 @@ export default function FreelancerProjectsPage() {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch("/api/projects", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-
+      const response = await fetch("/api/projects")
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch projects")
+        throw new Error(`Failed to fetch projects: ${response.status}`)
       }
-
+      
       const data = await response.json()
-      if (Array.isArray(data)) {
-        setProjects(data)
-      } else {
-        console.error("Invalid data format:", data)
-        setProjects([])
-      }
+      setProjects(Array.isArray(data) ? data : [])
+      setIsLoaded(true)
     } catch (error) {
       console.error("Error fetching projects:", error)
-      setProjects([])
+      setError("Failed to load projects. Please try again.")
       toast({
         title: "Error loading projects",
-        description: "Failed to load projects. Please try again later.",
-        variant: "destructive",
+        description: "Failed to load your projects. Please try again.",
+        variant: "destructive"
       })
+      setIsLoaded(true)
     }
   }
+
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      router.push("/unauthorized")
+      return
+    }
+  }, [isLoading, isAuthorized, router])
 
   useEffect(() => {
     fetchProjects()
   }, [])
 
-  useEffect(() => {
-    if (!isLoading && !isAuthorized) {
-      window.location.replace("/unauthorized")
-    }
-  }, [isLoading, isAuthorized])
-
-  if (isLoading) {
+  if (isLoading || !isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -134,6 +131,23 @@ export default function FreelancerProjectsPage() {
 
   if (!isAuthorized) {
     return null
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => fetchProjects()}
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   const handleDeleteProject = (project: Project) => {

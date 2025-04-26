@@ -71,6 +71,50 @@ export default function StudentKanbanPage() {
     return matchesSearchTerm && matchesSelectedCourse && matchesSelectedStatus && isNotCompleted
   })
   
+  // Add useEffect to automatically move completed kanban boards
+  useEffect(() => {
+    const checkCompletedBoards = async () => {
+      const completedBoards = assignmentsWithBoards.filter(assignment => 
+        assignment.status === "completed" && assignment.kanbanBoardId
+      );
+      
+      if (completedBoards.length > 0) {
+        try {
+          // Delete completed boards from the main list
+          for (const board of completedBoards) {
+            const response = await fetch(`/api/kanban/${board.kanbanBoardId}`, {
+              method: "DELETE",
+            });
+            if (!response.ok) throw new Error("Failed to delete completed board");
+          }
+          
+          // Update local state by removing completed boards
+          const updatedAssignments = assignmentsWithBoards.filter(assignment => 
+            !completedBoards.some(board => board.id === assignment.id)
+          );
+          
+          toast({
+            title: "Boards Moved",
+            description: `${completedBoards.length} completed kanban board(s) have been moved to the completed page.`,
+          });
+        } catch (error) {
+          console.error("Error moving completed boards:", error);
+          toast({
+            title: "Error",
+            description: "Failed to move completed boards",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    // Check every minute
+    const interval = setInterval(checkCompletedBoards, 60000);
+    checkCompletedBoards(); // Initial check
+
+    return () => clearInterval(interval);
+  }, [assignmentsWithBoards, toast]);
+  
   if (isPageLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">

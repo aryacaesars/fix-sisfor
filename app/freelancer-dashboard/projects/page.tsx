@@ -143,6 +143,43 @@ export default function FreelancerProjectsPage() {
     }
   }
 
+  const handleStatusChange = async (project: Project, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/projects/${project.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...project,
+          status: newStatus,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update project status")
+
+      setProjects(prevProjects => 
+        prevProjects.map(p => 
+          p.id === project.id 
+            ? { ...p, status: newStatus }
+            : p
+        )
+      )
+
+      toast({
+        title: "Success",
+        description: "Project status updated successfully",
+      })
+    } catch (error) {
+      console.error("Error updating project status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update project status",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -171,11 +208,11 @@ export default function FreelancerProjectsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-500"
-      case "completed":
-        return "bg-blue-500"
-      case "on-hold":
         return "bg-yellow-500"
+      case "completed":
+        return "bg-green-500"
+      case "on-hold":
+        return "bg-red-500"
       default:
         return "bg-gray-500"
     }
@@ -411,84 +448,210 @@ export default function FreelancerProjectsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {filteredProjects.length > 0 ? (
-          filteredProjects.map((project) => (
-            <Card key={project.id} className="transition-all duration-300 hover:shadow-lg flex flex-col h-full w-full max-w-full">
-              <CardHeader className="pb-4">
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-xl truncate">{project.title}</CardTitle>
-                  <div className="flex gap-2 items-center shrink-0">
-                    <div className={`px-3 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)} whitespace-nowrap`}>
-                      {project.status || "Unknown"}
+          <>
+            {/* Active Projects Section */}
+            {filteredProjects.filter(project => project.status !== "completed").length > 0 && (
+              <>
+                <h2 className="text-xl font-semibold col-span-full">Active Projects</h2>
+                {filteredProjects
+                  .filter(project => project.status !== "completed")
+                  .map((project) => (
+                    <Card key={project.id} className="transition-all duration-300 hover:shadow-lg flex flex-col h-full w-full max-w-full">
+                      <CardHeader className="pb-4">
+                        <div className="flex justify-between items-start gap-2">
+                          <CardTitle className="text-xl truncate">{project.title}</CardTitle>
+                          <div className="flex gap-2 items-center shrink-0">
+                            <Select 
+                              value={project.status} 
+                              onValueChange={(value) => handleStatusChange(project, value)}
+                            >
+                              <SelectTrigger className={`h-7 px-3 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)} whitespace-nowrap border-0 hover:opacity-80 transition-opacity`}>
+                                <SelectValue>{project.status || "Unknown"}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="on-hold">On Hold</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {isManageMode && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteProject(project)}
+                                className="text-red-500 hover:bg-red-50 shrink-0"
+                                title="Delete Project"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1 truncate">{project.clientName || "No client"}</p>
+                      </CardHeader>
+                      <CardContent className="flex-grow pb-6">
+                        <p className="text-sm mb-6 line-clamp-3 break-words">{project.description || "No description"}</p>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">{formatDate(project.startDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">{formatDate(project.endDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 col-span-2">
+                            <span className="text-muted-foreground font-medium shrink-0">Rp</span>
+                            <span className="truncate">{formatCurrency(project.budget).replace('Rp', '')}</span>
+                          </div>
+                          <div className="flex items-center gap-2 col-span-2 mt-2">
+                            <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">Assigned to: {project.assignedTo || "Unassigned"}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="pt-4 border-t">
+                        <div className="flex gap-3 w-full">
+                          <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">
+                              <Eye className="h-3.5 w-3.5 mr-1" />
+                              View Details
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              if (project.kanbanBoardId) {
+                                window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
+                              } else {
+                                toast({
+                                  title: "No Kanban board",
+                                  description: "This project doesn't have a Kanban board associated with it.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <Kanban className="h-3.5 w-3.5 mr-1" />
+                            View Kanban
+                          </Button>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  ))}
+              </>
+            )}
+
+            {/* Completed Projects Section */}
+            {filteredProjects.filter(project => project.status === "completed").length > 0 && (
+              <>
+                <div className="col-span-full my-8">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
                     </div>
-                    {isManageMode && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteProject(project)}
-                        className="text-red-500 hover:bg-red-50 shrink-0"
-                        title="Delete Project"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </Button>
-                    )}
+                    <div className="relative flex justify-center">
+                      <span className="bg-background px-4 text-xl font-semibold">Completed Projects</span>
+                    </div>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1 truncate">{project.clientName || "No client"}</p>
-              </CardHeader>
-              <CardContent className="flex-grow pb-6">
-                <p className="text-sm mb-6 line-clamp-3 break-words">{project.description || "No description"}</p>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="truncate">{formatDate(project.startDate)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="truncate">{formatDate(project.endDate)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 col-span-2">
-                    <span className="text-muted-foreground font-medium shrink-0">Rp</span>
-                    <span className="truncate">{formatCurrency(project.budget).replace('Rp', '')}</span>
-                  </div>
-                  <div className="flex items-center gap-2 col-span-2 mt-2">
-                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="truncate">Assigned to: {project.assignedTo || "Unassigned"}</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-4 border-t">
-                <div className="flex gap-3 w-full">
-                  <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Eye className="h-3.5 w-3.5 mr-1" />
-                      View Details
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      if (project.kanbanBoardId) {
-                        window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
-                      } else {
-                        toast({
-                          title: "No Kanban board",
-                          description: "This project doesn't have a Kanban board associated with it.",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    <Kanban className="h-3.5 w-3.5 mr-1" />
-                    View Kanban
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))
+                {filteredProjects
+                  .filter(project => project.status === "completed")
+                  .map((project) => (
+                    <Card key={project.id} className="transition-all duration-300 hover:shadow-lg flex flex-col h-full w-full max-w-full">
+                      <CardHeader className="pb-4">
+                        <div className="flex justify-between items-start gap-2">
+                          <CardTitle className="text-xl truncate">{project.title}</CardTitle>
+                          <div className="flex gap-2 items-center shrink-0">
+                            <Select 
+                              value={project.status} 
+                              onValueChange={(value) => handleStatusChange(project, value)}
+                            >
+                              <SelectTrigger className={`h-7 px-3 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)} whitespace-nowrap border-0 hover:opacity-80 transition-opacity`}>
+                                <SelectValue>{project.status || "Unknown"}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="on-hold">On Hold</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {isManageMode && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteProject(project)}
+                                className="text-red-500 hover:bg-red-50 shrink-0"
+                                title="Delete Project"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1 truncate">{project.clientName || "No client"}</p>
+                      </CardHeader>
+                      <CardContent className="flex-grow pb-6">
+                        <p className="text-sm mb-6 line-clamp-3 break-words">{project.description || "No description"}</p>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">{formatDate(project.startDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">{formatDate(project.endDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 col-span-2">
+                            <span className="text-muted-foreground font-medium shrink-0">Rp</span>
+                            <span className="truncate">{formatCurrency(project.budget).replace('Rp', '')}</span>
+                          </div>
+                          <div className="flex items-center gap-2 col-span-2 mt-2">
+                            <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">Assigned to: {project.assignedTo || "Unassigned"}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="pt-4 border-t">
+                        <div className="flex gap-3 w-full">
+                          <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">
+                              <Eye className="h-3.5 w-3.5 mr-1" />
+                              View Details
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              if (project.kanbanBoardId) {
+                                window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
+                              } else {
+                                toast({
+                                  title: "No Kanban board",
+                                  description: "This project doesn't have a Kanban board associated with it.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <Kanban className="h-3.5 w-3.5 mr-1" />
+                            View Kanban
+                          </Button>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  ))}
+              </>
+            )}
+          </>
         ) : (
           <div className="text-center col-span-full py-12">
             {searchTerm ? (

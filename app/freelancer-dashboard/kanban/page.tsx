@@ -122,11 +122,11 @@ export default function KanbanDashboardPage() {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "active":
-        return "bg-green-500 text-white"
-      case "completed":
-        return "bg-blue-500 text-white"
-      case "on-hold":
         return "bg-yellow-500 text-white"
+      case "completed":
+        return "bg-green-500 text-white"
+      case "on-hold":
+        return "bg-red-500 text-white"
       default:
         return "bg-gray-500 text-white"
     }

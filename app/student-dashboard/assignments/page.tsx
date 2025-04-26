@@ -18,6 +18,40 @@ import { useRBAC } from "@/hooks/use-rbac"
 import { format } from "date-fns"
 import { Calendar, Clock, Plus, Edit, Eye, Trash, Kanban, Search, Filter } from "lucide-react"
 import { Dialog as AlertDialog, DialogContent as AlertDialogContent, DialogHeader as AlertDialogHeader, DialogTitle as AlertDialogTitle, DialogFooter as AlertDialogFooter } from "@/components/ui/dialog"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+interface Course {
+  id: string
+  name: string
+  code: string
+  lecturer: string
+  room?: string
+  schedule: Array<{
+    day: string
+    startTime: string
+    endTime: string
+  }>
+}
+
+interface Assignment {
+  id: string
+  title: string
+  description?: string
+  course?: string
+  status: string
+  dueDate?: string
+  userId: string
+  createdAt: string
+  updatedAt: string
+  kanbanBoardId?: string
+}
 
 export default function AssignmentsPage() {
   const { isAuthorized, isLoading: authLoading } = useRBAC(["Student"])
@@ -25,16 +59,17 @@ export default function AssignmentsPage() {
   const router = useRouter()
   const searchParams = useSearchParams() // Add this to access query parameters
   
-  const [assignments, setAssignments] = useState([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [courses, setCourses] = useState<Course[]>([]) // Add courses state
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   
   // Selected assignment for viewing/editing
-  const [selectedAssignment, setSelectedAssignment] = useState(null)
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<Partial<Assignment>>({
     title: "",
     description: "",
     course: "",
@@ -43,7 +78,7 @@ export default function AssignmentsPage() {
   })
   
   // New assignment form state
-  const [newAssignment, setNewAssignment] = useState({
+  const [newAssignment, setNewAssignment] = useState<Partial<Assignment>>({
     title: "",
     description: "",
     course: "",
@@ -52,8 +87,10 @@ export default function AssignmentsPage() {
   })
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [assignmentToDelete, setAssignmentToDelete] = useState(null)
+  const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null)
   const [isManageMode, setIsManageMode] = useState(false)
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all")
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all")
 
   // Check for the openModal query parameter and open the modal if it exists
   useEffect(() => {
@@ -77,7 +114,7 @@ export default function AssignmentsPage() {
         setLoading(true)
         const response = await fetch("/api/assignments")
         if (!response.ok) throw new Error("Failed to fetch assignments")
-        const data = await response.json()
+        const data = await response.json() as Assignment[]
         setAssignments(data)
       } catch (error) {
         console.error("Error fetching assignments:", error)
@@ -96,24 +133,52 @@ export default function AssignmentsPage() {
     }
   }, [isAuthorized, toast])
   
-  // Filter assignments based on search
+  // Load courses
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch("/api/courses")
+        if (!response.ok) throw new Error("Failed to fetch courses")
+        const data = await response.json() as Course[]
+        setCourses(data)
+      } catch (error) {
+        console.error("Error fetching courses:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load courses",
+          variant: "destructive"
+        })
+      }
+    }
+    
+    if (isAuthorized) {
+      fetchCourses()
+    }
+  }, [isAuthorized, toast])
+  
+  // Filter assignments based on search and filters
   const filteredAssignments = assignments.filter(assignment => {
-    return (
+    const matchesSearchTerm = (
       assignment.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       assignment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       assignment.course?.toLowerCase().includes(searchTerm.toLowerCase())
     )
+
+    const matchesSelectedCourse = selectedCourseFilter === "all" || assignment.course === selectedCourseFilter
+    const matchesSelectedStatus = selectedStatusFilter === "all" || assignment.status === selectedStatusFilter
+
+    return matchesSearchTerm && matchesSelectedCourse && matchesSelectedStatus
   })
   
   // Open assignment details
-  const viewAssignmentDetails = (assignment) => {
+  const viewAssignmentDetails = (assignment: Assignment) => {
     setSelectedAssignment(assignment)
     setIsEditMode(false)
     setIsDetailsOpen(true)
   }
   
   // Open edit mode
-  const editAssignment = (assignment) => {
+  const editAssignment = (assignment: Assignment) => {
     setSelectedAssignment(assignment)
     setEditForm({
       title: assignment.title,
@@ -128,6 +193,8 @@ export default function AssignmentsPage() {
 
   // Handle saving edited assignment
   const handleSaveEdit = async () => {
+    if (!selectedAssignment) return
+
     try {
       // Validation
       if (!editForm.title || !editForm.course || !editForm.dueDate) {
@@ -218,7 +285,7 @@ export default function AssignmentsPage() {
   }
 
   // Handle delete assignment
-  const handleDeleteAssignment = async (assignment) => {
+  const handleDeleteAssignment = (assignment: Assignment) => {
     setAssignmentToDelete(assignment)
     setDeleteDialogOpen(true)
   }
@@ -248,7 +315,7 @@ export default function AssignmentsPage() {
   }
 
   // Get status color
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
         return "bg-green-500"
@@ -261,7 +328,7 @@ export default function AssignmentsPage() {
     }
   }
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "No due date"
     const date = new Date(dateString)
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -300,10 +367,50 @@ export default function AssignmentsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="flex gap-2">
-          <Filter className="h-4 w-4" />
-          Filter
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filter
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Filter by Course</DropdownMenuLabel>
+            <Select
+              value={selectedCourseFilter}
+              onValueChange={setSelectedCourseFilter}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select course" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {courses.map((course) => (
+                  <SelectItem key={course.id} value={course.name}>
+                    {course.name} ({course.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+            <Select
+              value={selectedStatusFilter}
+              onValueChange={setSelectedStatusFilter}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="not-started">Not Started</SelectItem>
+                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {loading ? (
@@ -399,12 +506,21 @@ export default function AssignmentsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="course">Course <span className="text-red-500">*</span></Label>
-              <Input
-                id="course"
-                placeholder="Enter course name"
+              <Select
                 value={newAssignment.course}
-                onChange={(e) => setNewAssignment({ ...newAssignment, course: e.target.value })}
-              />
+                onValueChange={(value) => setNewAssignment({ ...newAssignment, course: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.name}>
+                      {course.name} ({course.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>

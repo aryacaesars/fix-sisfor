@@ -65,7 +65,7 @@ export default function KanbanBoardPage() {
         title: "Access Denied",
         description: "Only students can access Kanban boards"
       })
-      router.push("/login")
+      router.push("/auth/login")
     }
   }, [isLoading, isAuthorized, router, toast])
   

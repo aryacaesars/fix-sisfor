@@ -12,7 +12,7 @@ import { AnimatedSection } from "@/components/animated-section"
 import { useToast } from "@/components/ui/use-toast"
 import { useRBAC } from "@/hooks/use-rbac"
 import { useAssignment } from "@/hooks/use-assignment"
-import { Search, Calendar, Star, StarOff, Kanban, Clock, ArrowRight } from "lucide-react"
+import { Search, Calendar, Star, StarOff, Kanban, Clock, ArrowRight, Eye } from "lucide-react"
 
 export default function StudentKanbanPage() {
   const { isAuthorized, isLoading: authLoading, user } = useRBAC(["Student"])
@@ -20,6 +20,8 @@ export default function StudentKanbanPage() {
   const router = useRouter()
   
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState("all")
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState("all")
   
   const {
     assignments,
@@ -36,7 +38,6 @@ export default function StudentKanbanPage() {
   
   const assignmentsWithBoards = getAssignmentsWithKanbanBoards()
   const favoriteAssignments = getFavoriteAssignments().filter(a => a.kanbanBoardId)
-  const filteredAssignments = filterAssignments(searchTerm)
   
   // Improved authorization handling
   useEffect(() => {
@@ -54,6 +55,21 @@ export default function StudentKanbanPage() {
   
   // Overall loading state
   const isPageLoading = authLoading || isLoading
+  
+  // Filter assignments with boards
+  const filteredAssignments = assignmentsWithBoards.filter(assignment => {
+    const matchesSearchTerm = (
+      assignment.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.course?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const matchesSelectedCourse = selectedCourseFilter === "all" || assignment.course === selectedCourseFilter
+    const matchesSelectedStatus = selectedStatusFilter === "all" || assignment.status === selectedStatusFilter
+    const isNotCompleted = assignment.status !== "completed"
+
+    return matchesSearchTerm && matchesSelectedCourse && matchesSelectedStatus && isNotCompleted
+  })
   
   if (isPageLoading) {
     return (
@@ -75,9 +91,17 @@ export default function StudentKanbanPage() {
     <AnimatedSection>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Assignment Kanban Boards</h1>
-        <Link href="/student-dashboard/assignments">
-          <Button variant="outline">Back to Assignments</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/student-dashboard/kanban/completed">
+            <Button variant="outline">
+              <Eye className="h-4 w-4 mr-2" />
+              View Completed
+            </Button>
+          </Link>
+          <Link href="/student-dashboard/assignments">
+            <Button variant="outline">Back to Assignments</Button>
+          </Link>
+        </div>
       </div>
       
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -112,7 +136,7 @@ export default function StudentKanbanPage() {
         
         <TabsContent value="all" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {assignmentsWithBoards.length > 0 ? (
+            {filteredAssignments.length > 0 ? (
               filteredAssignments.map((assignment) => (
                 <AssignmentCard 
                   key={assignment.id}
@@ -142,17 +166,19 @@ export default function StudentKanbanPage() {
         
         <TabsContent value="recent" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentAssignments.filter(a => a.kanbanBoardId).length > 0 ? (
-              recentAssignments.filter(a => a.kanbanBoardId).map((assignment) => (
-                <AssignmentCard 
-                  key={assignment.id}
-                  assignment={assignment}
-                  isFavorite={favorites.includes(assignment.id)}
-                  onToggleFavorite={toggleFavorite}
-                  getRelativeTime={getRelativeTime}
-                  getStatusColor={getStatusColor}
-                />
-              ))
+            {recentAssignments.filter(a => a.kanbanBoardId && a.status !== "completed").length > 0 ? (
+              recentAssignments
+                .filter(a => a.kanbanBoardId && a.status !== "completed")
+                .map((assignment) => (
+                  <AssignmentCard 
+                    key={assignment.id}
+                    assignment={assignment}
+                    isFavorite={favorites.includes(assignment.id)}
+                    onToggleFavorite={toggleFavorite}
+                    getRelativeTime={getRelativeTime}
+                    getStatusColor={getStatusColor}
+                  />
+                ))
             ) : (
               <div className="col-span-3 text-center p-8">
                 <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />

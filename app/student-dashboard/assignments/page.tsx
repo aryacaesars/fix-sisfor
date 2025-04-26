@@ -166,8 +166,9 @@ export default function AssignmentsPage() {
 
     const matchesSelectedCourse = selectedCourseFilter === "all" || assignment.course === selectedCourseFilter
     const matchesSelectedStatus = selectedStatusFilter === "all" || assignment.status === selectedStatusFilter
+    const isNotCompleted = assignment.status !== "completed"
 
-    return matchesSearchTerm && matchesSelectedCourse && matchesSelectedStatus
+    return matchesSearchTerm && matchesSelectedCourse && matchesSelectedStatus && isNotCompleted
   })
   
   // Open assignment details
@@ -321,6 +322,8 @@ export default function AssignmentsPage() {
         return "bg-green-500"
       case "in-progress":
         return "bg-yellow-500"
+      case "not-started":
+        return "bg-red-500"
       case "overdue":
         return "bg-red-500"
       default:
@@ -334,11 +337,73 @@ export default function AssignmentsPage() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
   }
 
+  // Add useEffect to check deadlines
+  useEffect(() => {
+    const checkDeadlines = async () => {
+      const now = new Date();
+      const updatedAssignments = assignments.map(assignment => {
+        if (assignment.status === "completed") return assignment;
+        
+        const dueDate = new Date(assignment.dueDate || "");
+        if (dueDate < now && assignment.status !== "overdue") {
+          return { ...assignment, status: "overdue" };
+        }
+        return assignment;
+      });
+
+      // Only update if there are changes
+      if (JSON.stringify(updatedAssignments) !== JSON.stringify(assignments)) {
+        setAssignments(updatedAssignments);
+      }
+
+      // Check for overdue assignments to delete
+      const overdueAssignments = assignments.filter(assignment => assignment.status === "overdue");
+      if (overdueAssignments.length > 0) {
+        try {
+          // Delete each overdue assignment
+          for (const assignment of overdueAssignments) {
+            const response = await fetch(`/api/assignments/${assignment.id}`, {
+              method: "DELETE",
+            });
+            if (!response.ok) throw new Error("Failed to delete overdue assignment");
+          }
+          
+          // Update local state by removing overdue assignments
+          setAssignments(assignments.filter(assignment => assignment.status !== "overdue"));
+          
+          toast({
+            title: "Overdue Assignments Deleted",
+            description: `${overdueAssignments.length} overdue assignment(s) have been automatically deleted.`,
+          });
+        } catch (error) {
+          console.error("Error deleting overdue assignments:", error);
+          toast({
+            title: "Error",
+            description: "Failed to delete overdue assignments",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    // Check deadlines every minute
+    const interval = setInterval(checkDeadlines, 60000);
+    checkDeadlines(); // Initial check
+
+    return () => clearInterval(interval);
+  }, [assignments, toast]);
+
   return (
     <AnimatedSection>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Assignments</h1>
         <div className="flex gap-2">
+          <Link href="/student-dashboard/assignments/completed">
+            <Button variant="outline" className="transition-all duration-200 hover:scale-105">
+              <Eye className="h-4 w-4 mr-2" />
+              View Completed
+            </Button>
+          </Link>
           <Button
             variant={isManageMode ? "default" : "outline"}
             className="transition-all duration-200 hover:scale-105"
@@ -636,11 +701,21 @@ export default function AssignmentsPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="edit-course">Course <span className="text-red-500">*</span></Label>
-                <Input
-                  id="edit-course"
+                <Select
                   value={editForm.course}
-                  onChange={(e) => setEditForm({...editForm, course: e.target.value})}
-                />
+                  onValueChange={(value) => setEditForm({...editForm, course: value})}
+                >
+                  <SelectTrigger id="edit-course">
+                    <SelectValue placeholder="Select a course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.name}>
+                        {course.name} ({course.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">

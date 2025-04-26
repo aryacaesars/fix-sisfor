@@ -161,15 +161,15 @@ export function useAssignment() {
     switch (status?.toLowerCase()) {
       case "active":
       case "in-progress":
-        return "bg-green-500 text-white"
+        return "bg-yellow-500 text-white"
       case "completed":
       case "submitted":
-        return "bg-blue-500 text-white"
+        return "bg-green-500 text-white"
       case "on-hold":
       case "paused":
         return "bg-yellow-500 text-white"
       case "not-started":
-        return "bg-gray-400 text-white"
+        return "bg-red-400 text-white"
       case "overdue":
         return "bg-red-500 text-white"
       default:

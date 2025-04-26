@@ -159,40 +159,40 @@ export default function FreelancerDashboard() {
           </CardFooter>
         </Card>
 
-        {/* Kanban Boards Card */}
-         <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
+        {/* Recent Templates Card */}
+        <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
           <CardHeader className="pb-2">
-            <CardTitle>Kanban Boards</CardTitle>
-            <CardDescription>Your project management boards</CardDescription>
+            <CardTitle>Recent Templates</CardTitle>
+            <CardDescription>Your recently used templates</CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
-             {isDataLoading ? (
-               <p className="text-sm text-muted-foreground">Loading boards...</p>
-             ) : kanbanBoards.length > 0 ? (
-               <ul className="space-y-1 text-sm">
-                 {kanbanBoards.slice(0, 3).map((board) => (
-                   <li key={board.id} className="p-2 rounded hover:bg-accent transition-colors">
-                     <Link href={`/freelancer-dashboard/kanban/${board.id}`} className="flex justify-between items-center w-full">
-                       <span className="truncate font-medium">{board.title}</span>
-                       <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">
-                         Updated {formatDate(board.updatedAt)}
-                       </span>
-                     </Link>
-                   </li>
-                 ))}
-                 {kanbanBoards.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {kanbanBoards.length - 3} more</li>}
-               </ul>
-             ) : (
-               <p className="text-sm text-muted-foreground text-center py-4">No Kanban boards found.</p>
-             )}
+            {isDataLoading ? (
+              <p className="text-sm text-muted-foreground">Loading templates...</p>
+            ) : templates.length > 0 ? (
+              <ul className="space-y-1 text-sm">
+                {templates.slice(0, 3).map((template) => (
+                  <li key={template.id} className="p-2 rounded hover:bg-accent transition-colors">
+                    <div className="flex justify-between items-center w-full cursor-pointer" onClick={() => openTemplateLink(template.link)}>
+                      <span className="truncate font-medium">{template.title}</span>
+                      <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">
+                        Last used {formatDate(template.lastUsed)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+                {templates.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {templates.length - 3} more</li>}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No templates found.</p>
+            )}
           </CardContent>
-           <CardFooter>
-             <Link href="/freelancer-dashboard/kanban" className="w-full">
-                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <span>View All Boards</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+          <CardFooter>
+            <Link href="/freelancer-dashboard/templates" className="w-full">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                <span>View All Templates</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         </Card>
 
@@ -217,9 +217,10 @@ export default function FreelancerDashboard() {
                       >
                         <div className="flex items-center gap-2">
                            <div className={`w-2 h-2 rounded-full ${
-                            project.status === 'completed' ? 'bg-green-600' :
-                            project.status === 'active' ? 'bg-primary' :
-                            'bg-yellow-500'
+                            project.status === 'completed' ? 'bg-green-500' :
+                            project.status === 'active' ? 'bg-yellow-500' :
+                            project.status === 'on-hold' ? 'bg-red-500' :
+                            'bg-gray-500'
                           }`}></div>
                           <span className="truncate font-medium">{project.title}</span>
                         </div>
@@ -235,8 +236,12 @@ export default function FreelancerDashboard() {
              )}
           </CardContent>
            <CardFooter>
-             {/* Optionally add a link or button here, e.g., to view all deadlines */}
-             <Button variant="outline" className="w-full" disabled>View All Deadlines (Soon)</Button>
+             <Link href="/freelancer-dashboard/projects" className="w-full">
+                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                  <span>View All Deadlines</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
           </CardFooter>
         </Card>
       </div>
@@ -266,23 +271,55 @@ export default function FreelancerDashboard() {
          <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
            <CardHeader>
              <CardTitle>Project Summary</CardTitle>
-             <CardDescription>Overview of your projects</CardDescription>
+             <CardDescription>Overview of your earnings</CardDescription>
            </CardHeader>
            <CardContent className="flex-grow">
               {isDataLoading ? (
                 <p className="text-sm text-muted-foreground">Loading summary...</p>
               ) : projects.length > 0 ? (
                 <div className="text-sm space-y-2">
-                   <div className="flex justify-between"><span>Total Projects:</span> <span className="font-medium">{projects.length}</span></div>
-                   <div className="flex justify-between"><span>Active:</span> <span className="font-medium text-primary">{activeProjects.length}</span></div>
-                   <div className="flex justify-between"><span>Completed:</span> <span className="font-medium text-green-600">{projects.filter(p => p.status === 'completed').length}</span></div>
-                   <div className="flex justify-between"><span>On Hold:</span> <span className="font-medium text-yellow-600">{projects.filter(p => p.status === 'on-hold').length}</span></div>
+                   <div className="flex justify-between">
+                     <span>Total Earnings:</span> 
+                     <span className="font-medium text-green-600">
+                       {new Intl.NumberFormat('id-ID', {
+                         style: 'currency',
+                         currency: 'IDR',
+                         minimumFractionDigits: 0
+                       }).format(
+                         projects
+                           .filter(p => p.status === 'completed')
+                           .reduce((total, project) => total + (project.budget || 0), 0)
+                       )}
+                     </span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span>Completed Projects:</span> 
+                     <span className="font-medium">
+                       {projects.filter(p => p.status === 'completed').length}
+                     </span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span>Average per Project:</span> 
+                     <span className="font-medium">
+                       {new Intl.NumberFormat('id-ID', {
+                         style: 'currency',
+                         currency: 'IDR',
+                         minimumFractionDigits: 0
+                       }).format(
+                         projects.filter(p => p.status === 'completed').length > 0
+                           ? projects
+                               .filter(p => p.status === 'completed')
+                               .reduce((total, project) => total + (project.budget || 0), 0) /
+                               projects.filter(p => p.status === 'completed').length
+                           : 0
+                       )}
+                     </span>
+                   </div>
                 </div>
               ) : (
                  <p className="text-sm text-muted-foreground text-center py-4">No project data available.</p>
               )}
            </CardContent>
-           {/* Optional Footer */}
          </Card>
 
          {/* Recent Templates Card */}

@@ -2,7 +2,8 @@
 
 import { 
   Home, BookOpen, LayoutGrid, FileText, Settings, User, 
-  Calendar, ArrowRight, ArrowLeft, ExternalLink, X, Info, AlertCircle, FileCode, Calculator 
+  Calendar, ArrowRight, ArrowLeft, ExternalLink, X, Info, AlertCircle, FileCode, Calculator,
+  CheckCircle2, XCircle
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { AnimatedSection } from "@/components/animated-section"
@@ -30,13 +31,74 @@ import {
 } from "@/components/ui/tooltip"
 import { RoleBasedCalendar } from "@/components/role-based-calendar"
 import { useToast } from "@/hooks/use-toast"
+import { 
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
-// Dynamically import chart components to avoid SSR issues
-const PieChart = dynamic(() => import("recharts").then(mod => mod.PieChart), { ssr: false })
-const Pie = dynamic(() => import("recharts").then(mod => mod.Pie), { ssr: false })
-const Cell = dynamic(() => import("recharts").then(mod => mod.Cell), { ssr: false })
-const Legend = dynamic(() => import("recharts").then(mod => mod.Legend), { ssr: false })
-const ResponsiveContainer = dynamic(() => import("recharts").then(mod => mod.ResponsiveContainer), { ssr: false })
+// Create a client-side only pie chart component
+const AssignmentPieChart = dynamic(
+  () => import('@/components/assignment-pie-chart'),
+  { ssr: false }
+)
+
+// Type definitions
+interface Assignment {
+  id: string;
+  title: string;
+  description?: string;
+  course?: string;
+  status: 'completed' | 'in-progress' | 'not-started';
+  dueDate?: string;
+  kanbanBoardId?: string;
+}
+
+interface Course {
+  id: string;
+  name: string;
+  description?: string;
+  schedule: Array<{
+    day: string;
+    startTime: string;
+    endTime: string;
+  }>;
+  room: string;
+}
+
+interface Template {
+  id: string;
+  title: string;
+  description?: string;
+  category: string;
+  link?: string;
+}
+
+interface KanbanData {
+  boards?: {
+    id: string;
+    title: string;
+    columns?: KanbanColumn[];
+  }[];
+}
+
+interface KanbanColumn {
+  id: string;
+  title: string;
+  tasks: {
+    id: string;
+    title: string;
+    dueDate?: string;
+  }[];
+}
+
+interface ChartData {
+  name: string;
+  value: number;
+  color: string;
+}
 
 // Fetch assignment data
 async function getAssignments(userId: string): Promise<Assignment[]> {
@@ -64,6 +126,18 @@ async function getKanbanData(userId: string): Promise<KanbanData> {
   }
 }
 
+// Add this function to fetch courses
+async function getCourses(userId: string): Promise<Course[]> {
+  try {
+    const response = await fetch('/api/courses');
+    if (!response.ok) throw new Error('Failed to fetch courses');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    return [];
+  }
+}
+
 // Simple Kanban Board Component
 const KanbanBoard = ({ columns = [] }: { columns: KanbanColumn[] }) => {
   if (columns.length === 0) {
@@ -76,7 +150,7 @@ const KanbanBoard = ({ columns = [] }: { columns: KanbanColumn[] }) => {
         <div key={column.id} className="bg-muted rounded-lg p-4">
           <h3 className="font-medium mb-4">{column.title}</h3>
           <div className="space-y-3">
-            {column.tasks.map(task => (
+            {column.tasks.map((task) => (
               <div key={task.id} className="bg-background p-3 rounded-md shadow-sm">
                 <h4 className="font-medium">{task.title}</h4>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -98,25 +172,32 @@ export default function StudentDashboard() {
   const { isAuthorized, isLoading, user } = useRBAC(["student"])
   const { toast } = useToast();
   const router = useRouter()
-  const [assignments, setAssignments] = useState([])
-  const [kanbanData, setKanbanData] = useState({ columns: [] })
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [kanbanData, setKanbanData] = useState<{
+    boardId?: string;
+    boardTitle?: string;
+    columns: KanbanColumn[];
+  }>({ columns: [] })
   const [isDataLoading, setIsDataLoading] = useState(true)
-  const [templates, setTemplates] = useState([]) // Add this state for templates
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [courses, setCourses] = useState<Course[]>([])
 
   // Fetch data when the component mounts and user is available
   useEffect(() => {
     if (user?.id) {
       const fetchData = async () => {
         setIsDataLoading(true);
-        const [assignmentsData, kanbanBoardsData, templatesData] = await Promise.all([
+        const [assignmentsData, kanbanBoardsData, templatesData, coursesData] = await Promise.all([
           getAssignments(user.id),
           getKanbanData(user.id),
-          getTemplates() // Add this function call
+          getTemplates(),
+          getCourses(user.id)
         ]);
         
-        setAssignments(assignmentsData);
-        setTemplates(templatesData); // Set templates data
+        setAssignments(assignmentsData as Assignment[]);
+        setTemplates(templatesData as Template[]);
+        setCourses(coursesData as Course[]);
         
         // Process kanban data for the first board if available
         if (kanbanBoardsData.boards && kanbanBoardsData.boards.length > 0) {
@@ -148,18 +229,21 @@ export default function StudentDashboard() {
   }
 
   // Format assignment stats for pie chart
-  const getAssignmentStats = () => {
+  const getAssignmentStats = (): ChartData[] => {
     if (!assignments.length) return [];
     
     const completed = assignments.filter(a => a.status === 'completed').length;
     const inProgress = assignments.filter(a => a.status === 'in-progress').length;
     const notStarted = assignments.filter(a => a.status === 'not-started').length;
     
-    return [
+    const stats = [
       { name: "Completed", value: completed, color: "#16a34a" },
       { name: "In Progress", value: inProgress, color: "#eab308" },
       { name: "Not Started", value: notStarted, color: "#ef4444" },
     ];
+
+    console.log('Assignment Stats:', stats);
+    return stats;
   };
 
   // Get upcoming assignments (sorted by due date)
@@ -168,8 +252,12 @@ export default function StudentDashboard() {
     
     const now = new Date();
     return assignments
-      .filter(a => a.dueDate && new Date(a.dueDate) > now)
-      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+      .filter(a => a.dueDate && a.status !== 'completed')
+      .sort((a, b) => {
+        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+        return dateA - dateB;
+      })
       .slice(0, 3);
   };
 
@@ -226,12 +314,72 @@ export default function StudentDashboard() {
         <h1 className="text-3xl font-bold mb-6">Student Dashboard</h1>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="transition-all duration-300 hover:shadow-md">
+          <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
+            <CardHeader className="pb-2">
+              <div>
+                <CardTitle>Upcoming Classes</CardTitle>
+                <CardDescription>Your classes for today</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1">
+              {isDataLoading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : courses.length > 0 ? (
+                <ul className="space-y-2">
+                  {courses
+                    .filter(course => {
+                      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+                      return course.schedule.some(sched => sched.day.toLowerCase() === today)
+                    })
+                    .map(course => (
+                      <li key={course.id} className="flex justify-between items-center">
+                        <div>
+                          <span className="font-medium">{course.name}</span>
+                          <p className="text-sm text-muted-foreground">{course.room}</p>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {course.schedule
+                            .filter(sched => sched.day.toLowerCase() === new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())
+                            .map(sched => `${sched.startTime}-${sched.endTime}`)
+                            .join(', ')}
+                        </span>
+                      </li>
+                    ))}
+                  {courses.filter(course => {
+                    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+                    return course.schedule.some(sched => sched.day.toLowerCase() === today)
+                  }).length === 0 && (
+                    <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                      <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                      <p>No classes scheduled for today</p>
+                    </div>
+                  )}
+                </ul>
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                  <p>No courses available</p>
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="border-t bg-background p-3">
+              <Link href="/student-dashboard/courses" className="w-full">
+                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>View All Classes</span>
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+
+          <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle>Upcoming Assignments</CardTitle>
               <CardDescription>Your assignments due soon</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1">
               {isDataLoading ? (
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
@@ -253,21 +401,29 @@ export default function StudentDashboard() {
                         <span className="font-medium">{assignment.title}</span>
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        {new Date(assignment.dueDate).toLocaleDateString('en-US', { 
+                        {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString('en-US', { 
                           month: 'short', 
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit'
-                        })}
+                        }) : 'No due date'}
                       </span>
                     </li>
                   ))}
                 </ul>
+              ) : assignments.length > 0 && assignments.every(a => a.status === 'completed') ? (
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
+                  <p>All assignments complete</p>
+                </div>
               ) : (
-                <p className="text-center py-4 text-muted-foreground">No upcoming assignments</p>
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                  <p>No upcoming assignments</p>
+                </div>
               )}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="border-t bg-background p-3">
               <Link href="/student-dashboard/assignments" className="w-full">
                 <Button variant="outline" className="w-full flex items-center justify-center gap-2">
                   <span>View All Assignments</span>
@@ -277,12 +433,12 @@ export default function StudentDashboard() {
             </CardFooter>
           </Card>
 
-          <Card className="transition-all duration-300 hover:shadow-md">
+          <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle>Template Shortcuts</CardTitle>
               <CardDescription>Quick access to your templates</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1">
               {isDataLoading ? (
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
@@ -296,7 +452,6 @@ export default function StudentDashboard() {
                       onClick={(e) => {
                         e.preventDefault();
                         if (template.link) {
-                          // Ensure the link has a protocol prefix to avoid relative URL handling
                           const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
                           window.open(url, '_blank', 'noopener,noreferrer');
                         }
@@ -319,10 +474,13 @@ export default function StudentDashboard() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-center py-4 text-muted-foreground">No templates available</p>
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                  <p>No templates available</p>
+                </div>
               )}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="border-t bg-background p-3">
               <Link href="/student-dashboard/templates" className="w-full">
                 <Button variant="outline" className="w-full flex items-center justify-center gap-2">
                   <span>View All Templates</span>
@@ -330,29 +488,6 @@ export default function StudentDashboard() {
                 </Button>
               </Link>
             </CardFooter>
-          </Card>
-
-          <Card className="transition-all duration-300 hover:shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle>Class Schedule</CardTitle>
-              <CardDescription>Today's classes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li className="flex justify-between items-center">
-                  <span>Introduction to Psychology</span>
-                  <span className="text-sm text-muted-foreground">9:00 AM</span>
-                </li>
-                <li className="flex justify-between items-center">
-                  <span>Calculus II</span>
-                  <span className="text-sm text-muted-foreground">11:00 AM</span>
-                </li>
-                <li className="flex justify-between items-center">
-                  <span>Computer Science 101</span>
-                  <span className="text-sm text-muted-foreground">2:00 PM</span>
-                </li>
-              </ul>
-            </CardContent>
           </Card>
         </div>
 
@@ -363,57 +498,23 @@ export default function StudentDashboard() {
               <CardTitle>Assignment Progress</CardTitle>
               <CardDescription>Your overall progress this semester</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {isDataLoading ? (
-                <div className="text-center py-10">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
+                <div className="flex items-center justify-center h-[220px]">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center">
-                  <div className="h-56 w-full max-w-xs">
-                    {assignmentStats.some(stat => stat.value > 0) ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={assignmentStats}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {assignmentStats.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Legend verticalAlign="bottom" height={36} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <p className="text-muted-foreground">No assignment data available</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="w-full mt-4">
-                    <div className="text-sm font-medium mb-2 text-center">
-                      Total Assignments: {assignments.length}
-                    </div>
-                  </div>
-                </div>
+                <AssignmentPieChart data={assignmentStats} />
               )}
             </CardContent>
           </Card>
           
-          <Card className="transition-all duration-300 hover:shadow-md">
+          <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
             <CardHeader>
               <CardTitle>Assignment Status</CardTitle>
               <CardDescription>Detailed progress breakdown</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1">
               {isDataLoading ? (
                 <div className="text-center py-10">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
@@ -422,11 +523,11 @@ export default function StudentDashboard() {
                 <div className="space-y-6">
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium flex items-center">
+                      <span className="text-foreground font-medium flex items-center">
                         <div className="w-3 h-3 bg-green-600 rounded-full mr-2"></div>
                         Completed
                       </span>
-                      <span className="font-medium">
+                      <span className="text-foreground font-medium">
                         {assignmentStats[0]?.value || 0}/{assignments.length}
                       </span>
                     </div>
@@ -444,11 +545,11 @@ export default function StudentDashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium flex items-center">
+                      <span className="text-foreground font-medium flex items-center">
                         <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
                         In Progress
                       </span>
-                      <span className="font-medium">
+                      <span className="text-foreground font-medium">
                         {assignmentStats[1]?.value || 0}/{assignments.length}
                       </span>
                     </div>
@@ -466,11 +567,11 @@ export default function StudentDashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium flex items-center">
+                      <span className="text-foreground font-medium flex items-center">
                         <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
                         Not Started
                       </span>
-                      <span className="font-medium">
+                      <span className="text-foreground font-medium">
                         {assignmentStats[2]?.value || 0}/{assignments.length}
                       </span>
                     </div>
@@ -488,7 +589,7 @@ export default function StudentDashboard() {
                 </div>
               )}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="border-t bg-background p-3">
               <Link href={kanbanData.boardId ? `/student-dashboard/kanban/${kanbanData.boardId}` : "/student-dashboard/kanban"} className="w-full">
                 <Button variant="outline" className="w-full flex items-center justify-center gap-2">
                   <span>Go to Assignment Board</span>
@@ -522,46 +623,6 @@ export default function StudentDashboard() {
           </Card>
         </div>
 
-        <div className="mt-8">
-          <Card className="transition-all duration-300 hover:shadow-md">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Your recent actions and updates</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <div className="rounded-full bg-primary/10 p-1 mt-0.5">
-                    <FileText className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Submitted Physics Lab Report</p>
-                    <p className="text-xs text-muted-foreground">Today, 10:23 AM</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="rounded-full bg-primary/10 p-1 mt-0.5">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Added new assignment: English Essay</p>
-                    <p className="text-xs text-muted-foreground">Yesterday, 4:45 PM</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="rounded-full bg-primary/10 p-1 mt-0.5">
-                    <LayoutGrid className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Updated Kanban board for CS Project</p>
-                    <p className="text-xs text-muted-foreground">Yesterday, 2:30 PM</p>
-                  </div>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Assignment Detail Dialog */}
         <Dialog open={selectedAssignment !== null} onOpenChange={(open) => !open && setSelectedAssignment(null)}>
           <DialogContent className="max-w-md">
@@ -583,14 +644,14 @@ export default function StudentDashboard() {
                   <div>
                     <p className="font-medium">Due Date</p>
                     <p>
-                      {new Date(selectedAssignment.dueDate).toLocaleDateString('en-US', {
+                      {selectedAssignment.dueDate ? new Date(selectedAssignment.dueDate).toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long', 
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
-                      })}
+                      }) : 'No due date'}
                     </p>
                   </div>
                   

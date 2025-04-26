@@ -53,6 +53,7 @@ export default function AssignmentsPage() {
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [assignmentToDelete, setAssignmentToDelete] = useState(null)
+  const [isManageMode, setIsManageMode] = useState(false)
 
   // Check for the openModal query parameter and open the modal if it exists
   useEffect(() => {
@@ -270,13 +271,23 @@ export default function AssignmentsPage() {
     <AnimatedSection>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Assignments</h1>
-        <Button
-          className="transition-all duration-200 hover:scale-105"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Assignment
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant={isManageMode ? "default" : "outline"}
+            className="transition-all duration-200 hover:scale-105"
+            onClick={() => setIsManageMode(!isManageMode)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Manage
+          </Button>
+          <Button
+            className="transition-all duration-200 hover:scale-105"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Assignment
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -304,21 +315,23 @@ export default function AssignmentsPage() {
           <p className="text-muted-foreground">No assignments found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredAssignments.map((assignment) => (
             <Card key={assignment.id} className="transition-all duration-200 hover:shadow-md flex flex-col">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-1">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteAssignment(assignment)}
-                    className="text-red-500 hover:bg-red-50"
-                    title="Delete Assignment"
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
+                  <CardTitle className="text-lg truncate">{assignment.title}</CardTitle>
+                  {isManageMode && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteAssignment(assignment)}
+                      className="text-red-500 hover:bg-red-50 shrink-0"
+                      title="Delete Assignment"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <CardDescription className="font-medium">
                   {assignment.course}
@@ -348,15 +361,16 @@ export default function AssignmentsPage() {
                     <Eye className="h-3.5 w-3.5 mr-1" />
                     View Details
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => editAssignment(assignment)}
-                  >
-                    <Edit className="h-3.5 w-3.5 mr-1" />
-                    Edit
-                  </Button>
+                  <Link href={assignment.kanbanBoardId ? `/student-dashboard/kanban/${assignment.kanbanBoardId}` : `/student-dashboard/assignments/${assignment.id}/create-board`} className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full"
+                    >
+                      <Kanban className="h-3.5 w-3.5 mr-1" />
+                      {assignment.kanbanBoardId ? 'View Kanban' : 'Create Kanban'}
+                    </Button>
+                  </Link>
                 </div>
               </CardFooter>
             </Card>
@@ -475,7 +489,12 @@ export default function AssignmentsPage() {
               </div>
               
               <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+                <Link href={selectedAssignment.kanbanBoardId ? `/student-dashboard/kanban/${selectedAssignment.kanbanBoardId}` : `/student-dashboard/assignments/${selectedAssignment.id}/create-board`} className="flex-1 min-w-0">
+                  <Button variant="outline" className="w-full">
+                    <Kanban className="h-4 w-4 mr-2" />
+                    {selectedAssignment.kanbanBoardId ? 'View Kanban' : 'Create Kanban'}
+                  </Button>
+                </Link>
                 <Button onClick={() => editAssignment(selectedAssignment)}>
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Assignment

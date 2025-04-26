@@ -12,12 +12,15 @@ import { Save } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
 
 export default function StudentSettingsPage() {
   const { isAuthorized, isLoading } = useRBAC(["student"])
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
   const [settings, setSettings] = useState({
     emailNotifications: true,
     theme: "system"
@@ -33,20 +36,27 @@ export default function StudentSettingsPage() {
         }
       } catch (error) {
         console.error("Error fetching settings:", error)
+        toast({
+          title: "Error loading settings",
+          description: "There was a problem loading your settings. Please try refreshing the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingSettings(false)
       }
     }
 
     fetchSettings()
-  }, [])
+  }, [toast])
 
   // Redirect unauthorized
   useEffect(() => {
     if (!isLoading && !isAuthorized) {
-      window.location.replace("/unauthorized")
+      router.push("/unauthorized")
     }
-  }, [isLoading, isAuthorized])
+  }, [isLoading, isAuthorized, router])
 
-  if (isLoading) {
+  if (isLoading || isLoadingSettings) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">

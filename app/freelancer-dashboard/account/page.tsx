@@ -12,12 +12,14 @@ import { Save } from "lucide-react";
 import { useRBAC } from "@/hooks/use-rbac";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import freelancerNavItems from "@/app/freelancer-dashboard/layout";
 
 const FreelancerAccountPage = () => {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"]);
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || "",
@@ -26,9 +28,19 @@ const FreelancerAccountPage = () => {
 
   useEffect(() => {
     if (!isLoading && !isAuthorized) {
-      window.location.replace("/unauthorized")
+      router.push("/unauthorized");
+      return;
     }
-  }, [isLoading, isAuthorized])
+  }, [isLoading, isAuthorized, router]);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+      });
+    }
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -42,7 +54,7 @@ const FreelancerAccountPage = () => {
   }
 
   if (!isAuthorized) {
-    return null; // The useRBAC hook will handle redirection
+    return null;
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

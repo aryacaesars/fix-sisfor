@@ -1,4 +1,4 @@
-import { Layers, Calendar, Users, Search, Clock, Shield, type LucideIcon } from "lucide-react"
+import { Kanban, Columns, ListTodo, Calendar, Star, Clock, type LucideIcon } from "lucide-react"
 import { AnimatedSection } from "@/components/animated-section"
 
 interface Feature {
@@ -14,40 +14,40 @@ interface FeaturesSectionProps {
 }
 
 export function FeaturesSection({
-  title = "Everything you need in one place",
-  subtitle = "Ciao combines the best of Trello's visual task management with Notion's powerful document capabilities.",
+  title = "Powerful Kanban for Project Management",
+  subtitle = "Streamline your workflow with our advanced Kanban system, designed to help you manage projects and tasks efficiently.",
   features,
 }: FeaturesSectionProps) {
   const defaultFeatures: Feature[] = [
     {
-      icon: Layers,
-      title: "Kanban Boards",
-      description: "Visualize your workflow with customizable boards, lists, and cards just like Trello.",
+      icon: Kanban,
+      title: "Visual Task Management",
+      description: "Organize and track your projects with intuitive Kanban boards, perfect for visualizing your workflow and progress.",
+    },
+    {
+      icon: Columns,
+      title: "Kanban Board Management",
+      description: "Create and customize columns to match your workflow, with drag-and-drop functionality for easy task organization.",
+    },
+    {
+      icon: ListTodo,
+      title: "Task Details & Tracking",
+      description: "Add detailed information to tasks, set priorities, due dates, and track progress with our comprehensive task management system.",
     },
     {
       icon: Calendar,
-      title: "Rich Documents",
-      description: "Create beautiful, functional documents with our powerful editor inspired by Notion.",
+      title: "Due Date Management",
+      description: "Set and manage deadlines effectively with our integrated calendar system and deadline tracking features.",
     },
     {
-      icon: Users,
-      title: "Team Collaboration",
-      description: "Work together in real-time with comments, mentions, and shared workspaces.",
-    },
-    {
-      icon: Search,
-      title: "Powerful Search",
-      description: "Find anything instantly with our advanced search capabilities across all content.",
+      icon: Star,
+      title: "Favorite Boards",
+      description: "Quickly access your most important boards with the favorites feature, making navigation more efficient.",
     },
     {
       icon: Clock,
-      title: "Time Tracking",
-      description: "Track time spent on tasks and projects to improve productivity and billing.",
-    },
-    {
-      icon: Shield,
-      title: "Enterprise Security",
-      description: "Keep your data safe with advanced security features and compliance controls.",
+      title: "Recent Activity",
+      description: "Stay updated with recent changes and updates across your boards for better project tracking.",
     },
   ]
 
@@ -55,7 +55,7 @@ export function FeaturesSection({
 
   return (
     <AnimatedSection delay={100}>
-      <section id="features" className="py-20 bg-muted">
+      <section id="features" className="py-20">
         <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
             <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary">Features</div>

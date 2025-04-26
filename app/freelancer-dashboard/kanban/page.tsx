@@ -41,7 +41,13 @@ export default function KanbanDashboardPage() {
   const [isLoaded, setIsLoaded] = useState(false)
   
   useEffect(() => {
-    // Load favorites from localStorage
+    if (!isLoading && !isAuthorized) {
+      router.push("/unauthorized")
+      return
+    }
+  }, [isLoading, isAuthorized, router])
+  
+  useEffect(() => {
     const storedFavorites = localStorage.getItem("favoriteKanbanBoards")
     if (storedFavorites) {
       setFavorites(JSON.parse(storedFavorites))
@@ -50,36 +56,25 @@ export default function KanbanDashboardPage() {
     fetchProjectBoards()
   }, [])
   
-  useEffect(() => {
-    if (!isLoading && !isAuthorized) {
-      window.location.replace("/unauthorized")
-    }
-  }, [isLoading, isAuthorized])
-
   const fetchProjectBoards = async () => {
     try {
       const response = await fetch("/api/kanban/boards")
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Server response:", errorText);
         throw new Error(`Failed to fetch Kanban boards: ${response.status}`)
       }
       
       const data = await response.json()
-      console.log("Fetched boards:", data);
       
-      // Separate completed boards
       const activeBoards = data.filter((board: ProjectBoard) => board.project.status !== "completed")
       const completedBoardsList = data.filter((board: ProjectBoard) => board.project.status === "completed")
       
       setProjectBoards(activeBoards)
       setCompletedBoards(completedBoardsList)
       
-      // Set recent boards (last 5 accessed)
       const recent = Array.isArray(activeBoards) ? [...activeBoards].sort((a, b) => 
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      ).slice(0, 5) : [];
+      ).slice(0, 5) : []
       
       setRecentBoards(recent)
       setIsLoaded(true)
@@ -91,9 +86,6 @@ export default function KanbanDashboardPage() {
         variant: "destructive"
       })
       setIsLoaded(true)
-      setProjectBoards([])
-      setRecentBoards([])
-      setCompletedBoards([])
     }
   }
   

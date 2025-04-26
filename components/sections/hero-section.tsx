@@ -10,8 +10,8 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({
-  title = "Where Trello meets Notion for ultimate productivity",
-  subtitle = "Organize your work, manage your projects, and collaborate with your team - all in one beautiful workspace.",
+  title = "Ciao: All-in-One Productivity Platform for Students & Freelancers",
+  subtitle = "Streamline your workflow with integrated task management, project tracking, and document collaboration - designed specifically for students and freelancers.",
   imageSrc = "/placeholder.svg?height=800&width=1200",
 }: HeroSectionProps) {
   return (
@@ -20,27 +20,31 @@ export function HeroSection({
         <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary mb-4">
-              Introducing Ciao
+              Your Ultimate Productivity Companion
             </div>
             <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl mb-6">{title}</h1>
             <p className="text-muted-foreground md:text-xl mb-8 max-w-2xl mx-auto">{subtitle}</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="transition-all duration-200 hover:scale-105">
-                Get Started for Free
+                Get started for free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button size="lg" variant="outline" className="transition-all duration-200 hover:scale-105">
-                Watch Demo
+                Explore Features
               </Button>
             </div>
-            <div className="flex items-center justify-center gap-6 mt-6 text-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6 text-sm">
               <div className="flex items-center gap-1">
                 <CheckCircle className="h-4 w-4 text-primary" />
-                <span>No credit card required</span>
+                <span>Task & Project Tracking</span>
               </div>
               <div className="flex items-center gap-1">
                 <CheckCircle className="h-4 w-4 text-primary" />
-                <span>Free 14-day trial</span>
+                <span>Form Templates</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                <span>Time Management</span>
               </div>
             </div>
           </div>
@@ -61,3 +65,5 @@ export function HeroSection({
   )
 }
 
+
+  

@@ -208,10 +208,10 @@ export default function LoginPage() {
         <div className="container flex flex-col items-center justify-between gap-4 px-4 md:flex-row">
           <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Ciao. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors duration-200">
+            <Link href="/terms" className="text-muted-foreground hover:text-foreground transition-colors duration-200">
               Terms
             </Link>
-            <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors duration-200">
+            <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors duration-200">
               Privacy
             </Link>
           </div>

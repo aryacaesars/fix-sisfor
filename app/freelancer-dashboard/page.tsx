@@ -130,7 +130,10 @@ export default function FreelancerDashboard() {
           </CardHeader>
           <CardContent className="flex-grow">
             {isDataLoading ? (
-              <p className="text-sm text-muted-foreground">Loading projects...</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading projects...</p>
+              </div>
             ) : activeProjects.length > 0 ? (
               <ul className="space-y-1 text-sm">
                 {activeProjects.slice(0, 3).map((project) => (
@@ -146,16 +149,21 @@ export default function FreelancerDashboard() {
                 {activeProjects.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {activeProjects.length - 3} more</li>}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No active projects found.</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <p className="text-sm text-muted-foreground">No active projects found.</p>
+              </div>
             )}
           </CardContent>
           <CardFooter>
-             <Link href="/freelancer-dashboard/projects" className="w-full">
-                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <span>View All Projects</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+            <Link href="/freelancer-dashboard/projects" className="w-full">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                <span>View All Projects</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         </Card>
 
@@ -167,7 +175,10 @@ export default function FreelancerDashboard() {
           </CardHeader>
           <CardContent className="flex-grow">
             {isDataLoading ? (
-              <p className="text-sm text-muted-foreground">Loading templates...</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading templates...</p>
+              </div>
             ) : templates.length > 0 ? (
               <ul className="space-y-1 text-sm">
                 {templates.slice(0, 3).map((template) => (
@@ -183,7 +194,12 @@ export default function FreelancerDashboard() {
                 {templates.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {templates.length - 3} more</li>}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No templates found.</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <p className="text-sm text-muted-foreground">No templates found.</p>
+              </div>
             )}
           </CardContent>
           <CardFooter>
@@ -203,45 +219,58 @@ export default function FreelancerDashboard() {
             <CardDescription>Your nearest project milestones</CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
-             {isDataLoading ? (
-               <p className="text-sm text-muted-foreground">Loading deadlines...</p>
-             ) : upcomingDeadlines.length > 0 ? (
-                <ul className="space-y-1 text-sm">
-                  {upcomingDeadlines
-                    .slice(0, 3)
-                    .map((project) => (
-                      <li
-                        key={project.id}
-                        className="flex justify-between items-center p-2 rounded hover:bg-accent cursor-pointer transition-colors"
-                        onClick={() => setSelectedProjectForDialog(project)} // Open dialog on click
-                      >
-                        <div className="flex items-center gap-2">
-                           <div className={`w-2 h-2 rounded-full ${
-                            project.status === 'completed' ? 'bg-green-500' :
-                            project.status === 'active' ? 'bg-yellow-500' :
-                            project.status === 'on-hold' ? 'bg-red-500' :
-                            'bg-gray-500'
-                          }`}></div>
-                          <span className="truncate font-medium">{project.title}</span>
-                        </div>
-                        <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">
-                          {formatDate(project.endDate)}
-                        </span>
-                      </li>
-                    ))}
-                   {upcomingDeadlines.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {upcomingDeadlines.length - 3} more</li>}
-                </ul>
-             ) : (
-               <p className="text-sm text-muted-foreground text-center py-4">No upcoming deadlines.</p>
-             )}
+            {isDataLoading ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading deadlines...</p>
+              </div>
+            ) : projects.length > 0 && projects.every(p => p.status === 'completed') ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-sm text-muted-foreground">All projects completed!</p>
+              </div>
+            ) : upcomingDeadlines.length > 0 ? (
+              <ul className="space-y-1 text-sm">
+                {upcomingDeadlines.slice(0, 3).map((project) => (
+                  <li
+                    key={project.id}
+                    className="flex justify-between items-center p-2 rounded hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => setSelectedProjectForDialog(project)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        project.status === 'completed' ? 'bg-green-500' :
+                        project.status === 'active' ? 'bg-yellow-500' :
+                        project.status === 'on-hold' ? 'bg-red-500' :
+                        'bg-gray-500'
+                      }`}></div>
+                      <span className="truncate font-medium">{project.title}</span>
+                    </div>
+                    <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">
+                      {formatDate(project.endDate)}
+                    </span>
+                  </li>
+                ))}
+                {upcomingDeadlines.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {upcomingDeadlines.length - 3} more</li>}
+              </ul>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <p className="text-sm text-muted-foreground">No upcoming deadlines.</p>
+              </div>
+            )}
           </CardContent>
-           <CardFooter>
-             <Link href="/freelancer-dashboard/projects" className="w-full">
-                <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                  <span>View All Deadlines</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+          <CardFooter>
+            <Link href="/freelancer-dashboard/projects" className="w-full">
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                <span>View All Deadlines</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         </Card>
       </div>

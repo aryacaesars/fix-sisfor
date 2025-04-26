@@ -30,6 +30,19 @@ import {
 } from "@/components/ui/tooltip"
 import { RoleBasedCalendar } from "@/components/role-based-calendar"
 import { useToast } from "@/hooks/use-toast"
+import { 
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+
+// Create a client-side only pie chart component
+const AssignmentPieChart = dynamic(
+  () => import('@/components/assignment-pie-chart'),
+  { ssr: false }
+)
 
 // Type definitions
 interface Assignment {
@@ -80,12 +93,11 @@ interface KanbanColumn {
   }[];
 }
 
-// Dynamically import chart components to avoid SSR issues
-const PieChart = dynamic(() => import("recharts").then(mod => mod.PieChart) as any, { ssr: false })
-const Pie = dynamic(() => import("recharts").then(mod => mod.Pie) as any, { ssr: false })
-const Cell = dynamic(() => import("recharts").then(mod => mod.Cell) as any, { ssr: false })
-const Legend = dynamic(() => import("recharts").then(mod => mod.Legend) as any, { ssr: false })
-const ResponsiveContainer = dynamic(() => import("recharts").then(mod => mod.ResponsiveContainer) as any, { ssr: false })
+interface ChartData {
+  name: string;
+  value: number;
+  color: string;
+}
 
 // Fetch assignment data
 async function getAssignments(userId: string): Promise<Assignment[]> {
@@ -216,18 +228,21 @@ export default function StudentDashboard() {
   }
 
   // Format assignment stats for pie chart
-  const getAssignmentStats = () => {
+  const getAssignmentStats = (): ChartData[] => {
     if (!assignments.length) return [];
     
     const completed = assignments.filter(a => a.status === 'completed').length;
     const inProgress = assignments.filter(a => a.status === 'in-progress').length;
     const notStarted = assignments.filter(a => a.status === 'not-started').length;
     
-    return [
+    const stats = [
       { name: "Completed", value: completed, color: "#16a34a" },
       { name: "In Progress", value: inProgress, color: "#eab308" },
       { name: "Not Started", value: notStarted, color: "#ef4444" },
     ];
+
+    console.log('Assignment Stats:', stats);
+    return stats;
   };
 
   // Get upcoming assignments (sorted by due date)
@@ -469,47 +484,13 @@ export default function StudentDashboard() {
               <CardTitle>Assignment Progress</CardTitle>
               <CardDescription>Your overall progress this semester</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {isDataLoading ? (
-                <div className="text-center py-10">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
+                <div className="flex items-center justify-center h-[220px]">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center">
-                  <div className="h-56 w-full max-w-xs">
-                    {assignmentStats.some(stat => stat.value > 0) ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={assignmentStats}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {assignmentStats.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Legend verticalAlign="bottom" height={36} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <p className="text-muted-foreground">No assignment data available</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="w-full mt-4">
-                    <div className="text-sm font-medium mb-2 text-center">
-                      Total Assignments: {assignments.length}
-                    </div>
-                  </div>
-                </div>
+                <AssignmentPieChart data={assignmentStats} />
               )}
             </CardContent>
           </Card>
@@ -624,46 +605,6 @@ export default function StudentDashboard() {
                 isLoading={isDataLoading} 
                 boardId={kanbanData.boardId} 
               />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-8">
-          <Card className="transition-all duration-300 hover:shadow-md">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Your recent actions and updates</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <div className="rounded-full bg-primary/10 p-1 mt-0.5">
-                    <FileText className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Submitted Physics Lab Report</p>
-                    <p className="text-xs text-muted-foreground">Today, 10:23 AM</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="rounded-full bg-primary/10 p-1 mt-0.5">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Added new assignment: English Essay</p>
-                    <p className="text-xs text-muted-foreground">Yesterday, 4:45 PM</p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="rounded-full bg-primary/10 p-1 mt-0.5">
-                    <LayoutGrid className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Updated Kanban board for CS Project</p>
-                    <p className="text-xs text-muted-foreground">Yesterday, 2:30 PM</p>
-                  </div>
-                </li>
-              </ul>
             </CardContent>
           </Card>
         </div>

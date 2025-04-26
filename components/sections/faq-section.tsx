@@ -12,35 +12,35 @@ interface FAQSectionProps {
 }
 
 export function FAQSection({
-  title = "Frequently asked questions",
-  subtitle = "Everything you need to know about Ciao.",
+  title = "Frequently Asked Questions",
+  subtitle = "Find answers to common questions about Ciao.",
   faqs,
 }: FAQSectionProps) {
   const defaultFAQs: FAQItem[] = [
     {
-      question: "How is Ciao different from Trello and Notion?",
+      question: "What is Ciao and how does it work?",
       answer:
-        "Ciao combines the visual task management of Trello with the powerful document capabilities of Notion in one seamless platform. Instead of switching between tools, you get the best of both worlds in a single, integrated workspace.",
+        "Ciao is a modern collaboration platform that combines task management, document sharing, and team communication in one seamless interface. It helps teams organize their work, share knowledge, and stay connected through an intuitive and powerful workspace.",
     },
     {
-      question: "Can I import my data from Trello or Notion?",
+      question: "What are the key features of Ciao?",
       answer:
-        "Yes! Ciao provides easy import tools for both Trello and Notion. You can bring in your boards, cards, documents, and databases with just a few clicks, preserving your existing workflow.",
+        "Ciao offers a comprehensive suite of features including: Kanban boards for task management, real-time document collaboration, team chat, file sharing, project timelines, customizable workflows, and powerful integrations with popular tools. All these features are designed to work together seamlessly.",
     },
     {
-      question: "Is there a limit to how many team members I can add?",
+      question: "How secure is my data in Ciao?",
       answer:
-        "The Free plan allows up to 2 team members. The Pro and Enterprise plans support unlimited team members, with pricing based on a per-user model.",
+        "Security is our top priority. Ciao uses enterprise-grade encryption, regular backups, and strict access controls to protect your data. We also comply with major security standards and offer advanced security features like two-factor authentication and audit logs.",
     },
     {
-      question: "Does Ciao work offline?",
+      question: "Can I integrate Ciao with other tools?",
       answer:
-        "Yes, Ciao has offline capabilities. You can continue working when you're not connected to the internet, and your changes will sync automatically when you're back online.",
+        "Yes! Ciao offers extensive integration capabilities. You can connect with popular tools like Slack, Google Drive, GitHub, and many more through our API and pre-built integrations. This allows you to create a customized workflow that fits your team's needs.",
     },
     {
       question: "What kind of support do you offer?",
       answer:
-        "All plans include community support. Pro plans include email support with 24-hour response times. Enterprise plans include dedicated support with a named account manager and priority response times.",
+        "We provide comprehensive support through multiple channels. All users get access to our knowledge base and community forums. Premium plans include priority email support, while enterprise customers receive dedicated account management and 24/7 technical support.",
     },
   ]
 
@@ -48,7 +48,7 @@ export function FAQSection({
 
   return (
     <AnimatedSection delay={500}>
-      <section id="faq" className="py-20 bg-muted">
+      <section id="faq" className="py-20">
         <div className="w-full max-w-[1200px] mx-auto px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
             <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary">FAQ</div>
@@ -60,7 +60,7 @@ export function FAQSection({
               <AnimatedSection
                 key={index}
                 delay={600 + index * 100}
-                className="rounded-lg border p-6 transition-all duration-300 hover:shadow-md hover:scale-[1.01]"
+                className="rounded-lg border bg-card p-6 transition-all duration-300 hover:shadow-md hover:scale-[1.01]"
               >
                 <h3 className="text-lg font-bold">{faq.question}</h3>
                 <p className="mt-2 text-muted-foreground">{faq.answer}</p>

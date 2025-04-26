@@ -18,39 +18,27 @@ interface FooterProps {
 export function Footer({ sections }: FooterProps) {
   const defaultSections: FooterSection[] = [
     {
-      title: "Product",
+      title: "Quick Links",
       links: [
-        { label: "Features", href: "#" },
-        { label: "Pricing", href: "#" },
-        { label: "Integrations", href: "#" },
-        { label: "Changelog", href: "#" },
+        { label: "Features", href: "#features" },
+        { label: "Pricing", href: "#pricing" },
+        { label: "Testimonials", href: "#testimonials" },
+        { label: "FAQ", href: "#faq" },
       ],
     },
     {
-      title: "Company",
+      title: "Connect",
       links: [
-        { label: "About", href: "#" },
-        { label: "Blog", href: "#" },
-        { label: "Careers", href: "#" },
-        { label: "Contact", href: "#" },
+        { label: "instagram", href: "https://instagram.com/ciao" },
+        { label: "GitHub", href: "https://github.com/ciao" },
+        { label: "LinkedIn", href: "https://linkedin.com/company/ciao" },
       ],
     },
     {
-      title: "Resources",
+      title: "About",
       links: [
-        { label: "Documentation", href: "#" },
-        { label: "Guides", href: "#" },
-        { label: "API", href: "#" },
-        { label: "Community", href: "#" },
-      ],
-    },
-    {
-      title: "Legal",
-      links: [
-        { label: "Terms", href: "#" },
-        { label: "Privacy", href: "#" },
-        { label: "Cookies", href: "#" },
-        { label: "Security", href: "#" },
+        { label: "Privacy Policy", href: "/privacy" },
+        { label: "Terms of Service", href: "/terms" },
       ],
     },
   ]
@@ -66,8 +54,7 @@ export function Footer({ sections }: FooterProps) {
             <span className="text-xl font-bold">Ciao</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Ciao combines the best of Trello and Notion to create the ultimate productivity platform for teams of all
-            sizes.
+            CIAO is an integrated academic information system that helps streamline educational management and organization.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-4">
@@ -92,7 +79,7 @@ export function Footer({ sections }: FooterProps) {
       </div>
       <div className="border-t py-6">
         <div className="w-full max-w-[1200px] mx-auto flex flex-col items-center justify-between gap-4 px-4 md:px-6 md:flex-row">
-          <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Ciao. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} CIAO. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="#" className="text-muted-foreground hover:text-foreground transition-colors duration-200">
               <span className="sr-only">Twitter</span>

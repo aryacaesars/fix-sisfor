@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,10 @@ export default function FreelancerSettingsPage() {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [settings, setSettings] = useState({
     emailNotifications: true,
     theme: "system"
@@ -25,27 +29,37 @@ export default function FreelancerSettingsPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthorized) {
-      window.location.replace("/unauthorized")
+      router.push("/unauthorized")
+      return
     }
-  }, [isLoading, isAuthorized])
+  }, [isLoading, isAuthorized, router])
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const response = await fetch("/api/settings")
-        if (response.ok) {
-          const data = await response.json()
-          setSettings(data)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch settings: ${response.status}`)
         }
+        const data = await response.json()
+        setSettings(data)
+        setIsLoaded(true)
       } catch (error) {
         console.error("Error fetching settings:", error)
+        setError("Failed to load settings. Please try again.")
+        toast({
+          title: "Error loading settings",
+          description: "Failed to load your settings. Please try again.",
+          variant: "destructive"
+        })
+        setIsLoaded(true)
       }
     }
 
     fetchSettings()
-  }, [])
+  }, [toast])
 
-  if (isLoading) {
+  if (isLoading || !isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -57,7 +71,24 @@ export default function FreelancerSettingsPage() {
   }
 
   if (!isAuthorized) {
-    return null // The useRBAC hook will handle redirection
+    return null
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   const handleSwitchChange = (setting: string, checked: boolean) => {
@@ -73,7 +104,6 @@ export default function FreelancerSettingsPage() {
       [setting]: value,
     }))
 
-    // Apply theme change immediately
     if (setting === "theme") {
       setTheme(value)
     }
@@ -100,6 +130,7 @@ export default function FreelancerSettingsPage() {
         description: "Your preferences have been updated successfully.",
       })
     } catch (error) {
+      console.error("Error saving settings:", error)
       toast({
         title: "Error saving settings",
         description: "There was a problem saving your settings. Please try again.",

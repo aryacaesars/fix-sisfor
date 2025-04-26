@@ -16,35 +16,27 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 export default function FreelancerDashboard() {
   const { isAuthorized, isLoading, user } = useRBAC(["freelancer"])
   const router = useRouter()
-  const [projects, setProjects] = useState<any[]>([]) // Add type annotation
-  const [kanbanBoards, setKanbanBoards] = useState<any[]>([]) // Add type annotation
-  const [templates, setTemplates] = useState<any[]>([]) // Add type annotation
+  const [projects, setProjects] = useState<any[]>([])
+  const [kanbanBoards, setKanbanBoards] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
   const [isDataLoading, setIsDataLoading] = useState(true)
-  const [selectedProjectForDialog, setSelectedProjectForDialog] = useState<any>(null); // State for Upcoming Deadlines dialog
-  const { toast } = useToast();
+  const [selectedProjectForDialog, setSelectedProjectForDialog] = useState<any>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!isLoading && !isAuthorized) {
-      router.replace("/unauthorized")
-    }
-  }, [isLoading, isAuthorized, router])
-
-  useEffect(() => {
-    // Check authorization as before
-    if (!isLoading && !isAuthorized && localStorage.getItem("auth-status") === "authenticated") {
       router.push("/unauthorized")
+      return
     }
   }, [isLoading, isAuthorized, router])
 
-  // Fetch data when component mounts and user is available
   useEffect(() => {
     if (user?.id) {
       const fetchData = async () => {
         setIsDataLoading(true)
         try {
-          // Fetch all the required data in parallel
           const [projectsData, kanbanBoardsData, templatesData] = await Promise.all([
-            fetch("/api/projects").then(res => res.ok ? res.json() : []), // Handle potential errors
+            fetch("/api/projects").then(res => res.ok ? res.json() : []),
             fetch("/api/kanban/boards").then(res => res.ok ? res.json() : []),
             fetch("/api/templates").then(res => res.ok ? res.json() : [])
           ])
@@ -54,10 +46,11 @@ export default function FreelancerDashboard() {
           setTemplates(Array.isArray(templatesData) ? templatesData : [])
         } catch (error) {
           console.error("Error fetching dashboard data:", error)
-          // Set empty arrays on error to prevent crashes
-          setProjects([])
-          setKanbanBoards([])
-          setTemplates([])
+          toast({
+            title: "Error loading data",
+            description: "Failed to load dashboard data. Please try again.",
+            variant: "destructive"
+          })
         } finally {
           setIsDataLoading(false)
         }
@@ -65,7 +58,7 @@ export default function FreelancerDashboard() {
 
       fetchData()
     }
-  }, [user]) // Dependency array includes user
+  }, [user, toast])
 
   useEffect(() => {
     if (!isDataLoading && projects.length > 0 && user?.id) {
@@ -88,8 +81,6 @@ export default function FreelancerDashboard() {
       });
     }
   }, [isDataLoading, projects, user, toast]);
-
-  // Loading and Unauthorized states remain the same
 
   // Helper function to format date
   const formatDate = (dateString: string | null | undefined) => {

@@ -1,5 +1,5 @@
 import { Home, Briefcase, LayoutGrid, FileText, Settings, User } from "lucide-react"
-import { ReactNode } from "react"
+import { ReactNode, Suspense } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 
 export const freelancerNavItems = [
@@ -41,8 +41,17 @@ interface FreelancerDashboardLayoutProps {
 
 export default function FreelancerDashboardLayout({ children }: FreelancerDashboardLayoutProps) {
   return (
-    <DashboardLayout navItems={freelancerNavItems} role="freelancer">
-      {children}
-    </DashboardLayout>
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    }>
+      <DashboardLayout navItems={freelancerNavItems} role="freelancer">
+        {children}
+      </DashboardLayout>
+    </Suspense>
   )
 }

@@ -80,28 +80,23 @@ export default function StudentKanbanPage() {
       
       if (completedBoards.length > 0) {
         try {
-          // Delete completed boards from the main list
-          for (const board of completedBoards) {
-            const response = await fetch(`/api/kanban/${board.kanbanBoardId}`, {
-              method: "DELETE",
-            });
-            if (!response.ok) throw new Error("Failed to delete completed board");
-          }
-          
-          // Update local state by removing completed boards
-          const updatedAssignments = assignmentsWithBoards.filter(assignment => 
-            !completedBoards.some(board => board.id === assignment.id)
-          );
+          // Update local state to reflect completed status
+          const updatedAssignments = assignmentsWithBoards.map(assignment => {
+            if (completedBoards.some(board => board.id === assignment.id)) {
+              return { ...assignment, status: "completed" };
+            }
+            return assignment;
+          });
           
           toast({
             title: "Boards Moved",
-            description: `${completedBoards.length} completed kanban board(s) have been moved to the completed page.`,
+            description: `${completedBoards.length} kanban board(s) have been moved to the completed section.`,
           });
         } catch (error) {
-          console.error("Error moving completed boards:", error);
+          console.error("Error updating completed boards:", error);
           toast({
             title: "Error",
-            description: "Failed to move completed boards",
+            description: "Failed to update completed boards",
             variant: "destructive"
           });
         }
@@ -136,12 +131,6 @@ export default function StudentKanbanPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Assignment Kanban Boards</h1>
         <div className="flex gap-2">
-          <Link href="/student-dashboard/kanban/completed">
-            <Button variant="outline">
-              <Eye className="h-4 w-4 mr-2" />
-              View Completed
-            </Button>
-          </Link>
           <Link href="/student-dashboard/assignments">
             <Button variant="outline">Back to Assignments</Button>
           </Link>
@@ -206,6 +195,31 @@ export default function StudentKanbanPage() {
               </div>
             )}
           </div>
+
+          {/* Completed Boards Section */}
+          {assignmentsWithBoards.filter(a => a.status === "completed").length > 0 && (
+            <>
+              <div className="border-t border-border my-8"></div>
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold">Completed Boards</h2>
+                <p className="text-sm text-muted-foreground">Boards that have been marked as completed</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {assignmentsWithBoards
+                  .filter(a => a.status === "completed")
+                  .map((assignment) => (
+                    <AssignmentCard 
+                      key={assignment.id}
+                      assignment={assignment}
+                      isFavorite={favorites.includes(assignment.id)}
+                      onToggleFavorite={toggleFavorite}
+                      getRelativeTime={getRelativeTime}
+                      getStatusColor={getStatusColor}
+                    />
+                  ))}
+              </div>
+            </>
+          )}
         </TabsContent>
         
         <TabsContent value="recent" className="mt-4">

@@ -168,8 +168,12 @@ export default function AssignmentsPage() {
     const matchesSelectedStatus = selectedStatusFilter === "all" || assignment.status === selectedStatusFilter
     const isNotCompleted = assignment.status !== "completed"
 
-    return matchesSearchTerm && matchesSelectedCourse && matchesSelectedStatus && isNotCompleted
+    return matchesSearchTerm && matchesSelectedCourse && matchesSelectedStatus
   })
+
+  // Separate completed assignments
+  const completedAssignments = filteredAssignments.filter(assignment => assignment.status === "completed")
+  const activeAssignments = filteredAssignments.filter(assignment => assignment.status !== "completed")
   
   // Open assignment details
   const viewAssignmentDetails = (assignment: Assignment) => {
@@ -393,17 +397,43 @@ export default function AssignmentsPage() {
     return () => clearInterval(interval);
   }, [assignments, toast]);
 
+  // Add this function after the getStatusColor function
+  const handleStatusChange = async (assignment: Assignment, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/assignments/${assignment.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...assignment, status: newStatus }),
+      })
+      
+      if (!response.ok) throw new Error('Failed to update status')
+      
+      // Update local state
+      setAssignments(assignments.map(item => 
+        item.id === assignment.id ? {...item, status: newStatus} : item
+      ))
+      
+      toast({
+        title: "Success",
+        description: "Status updated successfully",
+      })
+    } catch (error) {
+      console.error("Error updating status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive"
+      })
+    }
+  }
+
   return (
     <AnimatedSection>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Assignments</h1>
         <div className="flex gap-2">
-          <Link href="/student-dashboard/assignments/completed">
-            <Button variant="outline" className="transition-all duration-200 hover:scale-105">
-              <Eye className="h-4 w-4 mr-2" />
-              View Completed
-            </Button>
-          </Link>
           <Button
             variant={isManageMode ? "default" : "outline"}
             className="transition-all duration-200 hover:scale-105"
@@ -482,72 +512,194 @@ export default function AssignmentsPage() {
         <div className="flex justify-center py-10">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary"></div>
         </div>
-      ) : filteredAssignments.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">No assignments found</p>
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredAssignments.map((assignment) => (
-            <Card key={assignment.id} className="transition-all duration-200 hover:shadow-md flex flex-col">
-              <CardHeader className="pb-1">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg truncate">{assignment.title}</CardTitle>
-                  {isManageMode && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteAssignment(assignment)}
-                      className="text-red-500 hover:bg-red-50 shrink-0"
-                      title="Delete Assignment"
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <CardDescription className="font-medium">
-                  {assignment.course}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pb-2 flex-grow">
-                <p className="text-sm line-clamp-2 mb-3">{assignment.description || "No description provided"}</p>
-                <div className="flex flex-wrap gap-3 mt-auto">
-                  <Badge variant="outline" className={`flex items-center gap-1 ${getStatusColor(assignment.status)} bg-opacity-10`}>
-                    <div className={`h-2 w-2 rounded-full ${getStatusColor(assignment.status)}`}></div>
-                    <span className="text-xs capitalize">{assignment.status?.replace("-", " ") || "Not started"}</span>
-                  </Badge>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium">{formatDate(assignment.dueDate)}</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-2 border-t">
-                <div className="flex gap-2 w-full">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => viewAssignmentDetails(assignment)}
-                  >
-                    <Eye className="h-3.5 w-3.5 mr-1" />
-                    View Details
-                  </Button>
-                  <Link href={assignment.kanbanBoardId ? `/student-dashboard/kanban/${assignment.kanbanBoardId}` : `/student-dashboard/assignments/${assignment.id}/create-board`} className="flex-1">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="w-full"
-                    >
-                      <Kanban className="h-3.5 w-3.5 mr-1" />
-                      {assignment.kanbanBoardId ? 'View Kanban' : 'Create Kanban'}
-                    </Button>
-                  </Link>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        <>
+          {/* Active Assignments Section */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold mb-4">Active Assignments</h2>
+            {activeAssignments.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">No active assignments found</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {activeAssignments.map((assignment) => (
+                  <Card key={assignment.id} className="transition-all duration-200 hover:shadow-md flex flex-col">
+                    <CardHeader className="pb-1">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg truncate">{assignment.title}</CardTitle>
+                        {isManageMode && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteAssignment(assignment)}
+                            className="text-red-500 hover:bg-red-50 shrink-0"
+                            title="Delete Assignment"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <CardDescription className="font-medium">
+                        {assignment.course}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-2 flex-grow">
+                      <p className="text-sm line-clamp-2 mb-3">{assignment.description || "No description provided"}</p>
+                      <div className="flex flex-wrap gap-3 mt-auto">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge 
+                              variant="outline" 
+                              className={`flex items-center gap-1 ${getStatusColor(assignment.status)} bg-opacity-10 cursor-pointer`}
+                            >
+                              <div className={`h-2 w-2 rounded-full ${getStatusColor(assignment.status)}`}></div>
+                              <span className="text-xs capitalize">{assignment.status?.replace("-", " ") || "Not started"}</span>
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "not-started")}>
+                              Not Started
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "in-progress")}>
+                              In Progress
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "completed")}>
+                              Completed
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "overdue")}>
+                              Overdue
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs font-medium">{formatDate(assignment.dueDate)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-2 border-t">
+                      <div className="flex gap-2 w-full">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => viewAssignmentDetails(assignment)}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          View Details
+                        </Button>
+                        <Link href={assignment.kanbanBoardId ? `/student-dashboard/kanban/${assignment.kanbanBoardId}` : `/student-dashboard/assignments/${assignment.id}/create-board`} className="flex-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="w-full"
+                          >
+                            <Kanban className="h-3.5 w-3.5 mr-1" />
+                            {assignment.kanbanBoardId ? 'View Kanban' : 'Create Kanban'}
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Completed Assignments Section */}
+          {completedAssignments.length > 0 && (
+            <div className="mt-8 pt-8 border-t">
+              <h2 className="text-2xl font-semibold mb-4">Completed Assignments</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {completedAssignments.map((assignment) => (
+                  <Card key={assignment.id} className="transition-all duration-200 hover:shadow-md flex flex-col">
+                    <CardHeader className="pb-1">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg truncate">{assignment.title}</CardTitle>
+                        {isManageMode && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteAssignment(assignment)}
+                            className="text-red-500 hover:bg-red-50 shrink-0"
+                            title="Delete Assignment"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <CardDescription className="font-medium">
+                        {assignment.course}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-2 flex-grow">
+                      <p className="text-sm line-clamp-2 mb-3">{assignment.description || "No description provided"}</p>
+                      <div className="flex flex-wrap gap-3 mt-auto">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge 
+                              variant="outline" 
+                              className="flex items-center gap-1 bg-green-500 bg-opacity-10 cursor-pointer"
+                            >
+                              <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                              <span className="text-xs capitalize">Completed</span>
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "not-started")}>
+                              Not Started
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "in-progress")}>
+                              In Progress
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "completed")}>
+                              Completed
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(assignment, "overdue")}>
+                              Overdue
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs font-medium">Completed on: {formatDate(assignment.updatedAt)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-2 border-t">
+                      <div className="flex gap-2 w-full">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => viewAssignmentDetails(assignment)}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          View Details
+                        </Button>
+                        <Link href={assignment.kanbanBoardId ? `/student-dashboard/kanban/${assignment.kanbanBoardId}` : `/student-dashboard/assignments/${assignment.id}/create-board`} className="flex-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="w-full"
+                          >
+                            <Kanban className="h-3.5 w-3.5 mr-1" />
+                            {assignment.kanbanBoardId ? 'View Kanban' : 'Create Kanban'}
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal for New Assignment */}
@@ -650,10 +802,33 @@ export default function AssignmentsPage() {
               </div>
               
               <div className="flex flex-wrap gap-3">
-                <Badge variant="outline" className={`flex items-center gap-1 ${getStatusColor(selectedAssignment.status)} bg-opacity-10`}>
-                  <div className={`h-2 w-2 rounded-full ${getStatusColor(selectedAssignment.status)}`}></div>
-                  <span className="text-xs capitalize">{selectedAssignment.status?.replace("-", " ") || "Not started"}</span>
-                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Badge 
+                      variant="outline" 
+                      className={`flex items-center gap-1 ${getStatusColor(selectedAssignment.status)} bg-opacity-10 cursor-pointer`}
+                    >
+                      <div className={`h-2 w-2 rounded-full ${getStatusColor(selectedAssignment.status)}`}></div>
+                      <span className="text-xs capitalize">{selectedAssignment.status?.replace("-", " ") || "Not started"}</span>
+                    </Badge>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedAssignment, "not-started")}>
+                      Not Started
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedAssignment, "in-progress")}>
+                      In Progress
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedAssignment, "completed")}>
+                      Completed
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedAssignment, "overdue")}>
+                      Overdue
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">{formatDate(selectedAssignment.dueDate)}</span>
@@ -759,7 +934,9 @@ export default function AssignmentsPage() {
               <DialogFooter className="gap-2 pt-2">
                 <Button variant="outline" onClick={() => {
                   setIsEditMode(false);
-                  viewAssignmentDetails(selectedAssignment);
+                  if (selectedAssignment) {
+                    viewAssignmentDetails(selectedAssignment);
+                  }
                 }}>
                   Cancel
                 </Button>

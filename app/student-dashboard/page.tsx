@@ -2,7 +2,8 @@
 
 import { 
   Home, BookOpen, LayoutGrid, FileText, Settings, User, 
-  Calendar, ArrowRight, ArrowLeft, ExternalLink, X, Info, AlertCircle, FileCode, Calculator 
+  Calendar, ArrowRight, ArrowLeft, ExternalLink, X, Info, AlertCircle, FileCode, Calculator,
+  CheckCircle2, XCircle
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { AnimatedSection } from "@/components/animated-section"
@@ -251,7 +252,7 @@ export default function StudentDashboard() {
     
     const now = new Date();
     return assignments
-      .filter(a => a.dueDate)
+      .filter(a => a.dueDate && a.status !== 'completed')
       .sort((a, b) => {
         const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
         const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
@@ -350,14 +351,16 @@ export default function StudentDashboard() {
                     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
                     return course.schedule.some(sched => sched.day.toLowerCase() === today)
                   }).length === 0 && (
-                    <li className="text-center py-4 text-muted-foreground">
-                      No classes scheduled for today
-                    </li>
+                    <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                      <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                      <p>No classes scheduled for today</p>
+                    </div>
                   )}
                 </ul>
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-muted-foreground">No courses available</p>
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                  <p>No courses available</p>
                 </div>
               )}
             </CardContent>
@@ -408,8 +411,16 @@ export default function StudentDashboard() {
                     </li>
                   ))}
                 </ul>
+              ) : assignments.length > 0 && assignments.every(a => a.status === 'completed') ? (
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
+                  <p>All assignments complete</p>
+                </div>
               ) : (
-                <p className="text-center py-4 text-muted-foreground">No upcoming assignments</p>
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                  <p>No upcoming assignments</p>
+                </div>
               )}
             </CardContent>
             <CardFooter className="border-t bg-background p-3">
@@ -463,7 +474,10 @@ export default function StudentDashboard() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-center py-4 text-muted-foreground">No templates available</p>
+                <div className="flex flex-col items-center justify-center min-h-[180px] text-muted-foreground">
+                  <XCircle className="h-10 w-10 text-red-500 mb-3" />
+                  <p>No templates available</p>
+                </div>
               )}
             </CardContent>
             <CardFooter className="border-t bg-background p-3">
@@ -509,11 +523,11 @@ export default function StudentDashboard() {
                 <div className="space-y-6">
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium flex items-center">
+                      <span className="text-foreground font-medium flex items-center">
                         <div className="w-3 h-3 bg-green-600 rounded-full mr-2"></div>
                         Completed
                       </span>
-                      <span className="font-medium">
+                      <span className="text-foreground font-medium">
                         {assignmentStats[0]?.value || 0}/{assignments.length}
                       </span>
                     </div>
@@ -531,11 +545,11 @@ export default function StudentDashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium flex items-center">
+                      <span className="text-foreground font-medium flex items-center">
                         <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
                         In Progress
                       </span>
-                      <span className="font-medium">
+                      <span className="text-foreground font-medium">
                         {assignmentStats[1]?.value || 0}/{assignments.length}
                       </span>
                     </div>
@@ -553,11 +567,11 @@ export default function StudentDashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="font-medium flex items-center">
+                      <span className="text-foreground font-medium flex items-center">
                         <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
                         Not Started
                       </span>
-                      <span className="font-medium">
+                      <span className="text-foreground font-medium">
                         {assignmentStats[2]?.value || 0}/{assignments.length}
                       </span>
                     </div>

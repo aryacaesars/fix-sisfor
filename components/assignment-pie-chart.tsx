@@ -72,10 +72,10 @@ export default function AssignmentPieChart({ data }: AssignmentPieChartProps) {
       </ResponsiveContainer>
       
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-        <div className="text-2xl font-bold text-slate-900">
+        <div className="text-2xl font-bold text-foreground">
           {total}
         </div>
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-muted-foreground">
           Total
         </div>
       </div>

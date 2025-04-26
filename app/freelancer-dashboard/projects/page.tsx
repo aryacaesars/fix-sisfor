@@ -115,6 +115,27 @@ export default function FreelancerProjectsPage() {
     fetchProjects()
   }, [])
 
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      window.location.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading your projects...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthorized) {
+    return null
+  }
+
   const handleDeleteProject = (project: Project) => {
     setProjectToDelete(project)
     setDeleteDialogOpen(true)
@@ -178,21 +199,6 @@ export default function FreelancerProjectsPage() {
         variant: "destructive",
       })
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading your projects...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isAuthorized) {
-    return null
   }
 
   const filteredProjects = projects.filter((project) => {

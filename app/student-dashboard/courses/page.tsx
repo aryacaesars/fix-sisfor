@@ -67,7 +67,7 @@ interface Course {
 }
 
 export default function CoursesPage() {
-  const { isAuthorized, isLoading: authLoading } = useRBAC(["student"])
+  const { isAuthorized, isLoading } = useRBAC(["student"])
   const { toast } = useToast()
   const router = useRouter()
   
@@ -126,6 +126,28 @@ export default function CoursesPage() {
       fetchCourses()
     }
   }, [isAuthorized, toast])
+
+  // Redirect unauthorized
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      router.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized, router])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading courses...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthorized) {
+    return null
+  }
 
   // Filter courses based on search
   const filteredCourses = courses.filter(course => {
@@ -284,7 +306,7 @@ export default function CoursesPage() {
     }
   }
 
-  if (authLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -573,4 +595,4 @@ export default function CoursesPage() {
       </Dialog>
     </AnimatedSection>
   )
-} 
+}

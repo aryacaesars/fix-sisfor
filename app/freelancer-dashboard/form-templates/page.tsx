@@ -62,6 +62,12 @@ export default function FreelancerFormTemplatesPage() {
     fetchTemplates()
   }, [])
 
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      window.location.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized])
+
   if (isLoading || loadingTemplates) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -74,7 +80,7 @@ export default function FreelancerFormTemplatesPage() {
   }
 
   if (!isAuthorized) {
-    return null // The useRBAC hook akan menangani redirection
+    return null
   }
 
   const filteredTemplates = templates.filter((template) => {

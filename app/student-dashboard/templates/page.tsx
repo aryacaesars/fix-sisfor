@@ -151,6 +151,28 @@ export default function StudentFormTemplatesPage() {
     }
   }, [isModalOpen])
 
+  // Redirect unauthorized
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      window.location.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading templates...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthorized) {
+    return null
+  }
+
   const handleModalSubmit = async (formData) => {
     try {
       const response = await fetch("/api/templates", {
@@ -173,7 +195,7 @@ export default function StudentFormTemplatesPage() {
     }
   }
 
-  if (isLoading || loadingTemplates) {
+  if (loadingTemplates) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -182,10 +204,6 @@ export default function StudentFormTemplatesPage() {
         </div>
       </div>
     )
-  }
-
-  if (!isAuthorized) {
-    return null // The useRBAC hook will handle redirection
   }
 
   const filteredTemplates = templates.filter((template) => {

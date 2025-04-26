@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import { useRBAC } from "@/hooks/use-rbac"
 import { useAuth } from "@/context/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { Modal } from "@/components/ui/modal"
+import { useRouter } from "next/navigation"
 
 
 
@@ -21,6 +22,7 @@ export default function StudentAccountPage() {
   const { isAuthorized, isLoading } = useRBAC(["student"])
   const { user } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
   const [isUpdating, setIsUpdating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [confirmationInput, setConfirmationInput] = useState("")
@@ -28,7 +30,13 @@ export default function StudentAccountPage() {
     name: user?.name || "",
     email: user?.email || "",
   })
-
+// ...existing code...
+useEffect(() => {
+  if (!isLoading && !isAuthorized) {
+    router.replace("/unauthorized")
+  }
+}, [isLoading, isAuthorized, router])
+// ...existing code...
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">

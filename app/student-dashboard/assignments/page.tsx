@@ -54,10 +54,10 @@ interface Assignment {
 }
 
 export default function AssignmentsPage() {
-  const { isAuthorized, isLoading: authLoading } = useRBAC(["Student"])
+  const { isAuthorized, isLoading } = useRBAC(["student"])
   const { toast } = useToast()
   const router = useRouter()
-  const searchParams = useSearchParams() // Add this to access query parameters
+  const searchParams = useSearchParams()
   
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [courses, setCourses] = useState<Course[]>([]) // Add courses state
@@ -107,6 +107,28 @@ export default function AssignmentsPage() {
     }
   }, [searchParams])
   
+  // Redirect unauthorized
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      router.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized, router])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading assignments...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthorized) {
+    return null
+  }
+
   // Load assignments
   useEffect(() => {
     const fetchAssignments = async () => {

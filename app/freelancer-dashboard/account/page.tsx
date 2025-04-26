@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,12 @@ const FreelancerAccountPage = () => {
     name: user?.name || "",
     email: user?.email || "",
   });
+
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      window.location.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized])
 
   if (isLoading) {
     return (

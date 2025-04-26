@@ -24,6 +24,12 @@ export default function FreelancerSettingsPage() {
   })
 
   useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      window.location.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized])
+
+  useEffect(() => {
     const fetchSettings = async () => {
       try {
         const response = await fetch("/api/settings")

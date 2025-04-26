@@ -50,6 +50,12 @@ export default function KanbanDashboardPage() {
     fetchProjectBoards()
   }, [])
   
+  useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      window.location.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized])
+
   const fetchProjectBoards = async () => {
     try {
       const response = await fetch("/api/kanban/boards")
@@ -152,7 +158,7 @@ export default function KanbanDashboardPage() {
   }
 
   if (!isAuthorized) {
-    return null // The useRBAC hook will handle redirection
+    return null
   }
   
   return (

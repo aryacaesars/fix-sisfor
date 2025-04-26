@@ -24,6 +24,12 @@ export default function FreelancerDashboard() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!isLoading && !isAuthorized) {
+      router.replace("/unauthorized")
+    }
+  }, [isLoading, isAuthorized, router])
+
+  useEffect(() => {
     // Check authorization as before
     if (!isLoading && !isAuthorized && localStorage.getItem("auth-status") === "authenticated") {
       router.push("/unauthorized")

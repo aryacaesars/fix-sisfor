@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
+import Cookies from 'js-cookie'
 
 export function useRBAC(allowedRoles: string[]) {
   const { data: session, status } = useSession()
@@ -14,8 +15,12 @@ export function useRBAC(allowedRoles: string[]) {
       setIsLoading(true)
       
       try {
+        // Check both session and cookie
+        const storedSession = Cookies.get('auth-session')
+        const currentSession = session || (storedSession ? JSON.parse(storedSession) : null)
+        
         // Not authenticated
-        if (status === "unauthenticated") {
+        if (status === "unauthenticated" && !storedSession) {
           console.log("Session unauthenticated")
           setIsAuthorized(false)
           setIsLoading(false)
@@ -23,17 +28,17 @@ export function useRBAC(allowedRoles: string[]) {
         }
         
         // Still loading session
-        if (status === "loading") {
+        if (status === "loading" && !storedSession) {
           console.log("Session loading")
           return // Keep isLoading true
         }
         
         // Authenticated, check role
-        if (session?.user) {
-          console.log("Session authenticated:", session.user)
+        if (currentSession?.user) {
+          console.log("Session authenticated:", currentSession.user)
           
-          // Get user role from session or API
-          let userRole = (session.user as any)?.role
+          // Get user role from session or stored session
+          let userRole = (currentSession.user as any)?.role
           
           // Log for debugging
           console.log("User role from session:", userRole)
@@ -49,7 +54,7 @@ export function useRBAC(allowedRoles: string[]) {
           console.log("Has access:", hasAccess)
           
           setIsAuthorized(hasAccess)
-          setUser(session.user)
+          setUser(currentSession.user)
         } else {
           console.log("No user in session")
           setIsAuthorized(false)

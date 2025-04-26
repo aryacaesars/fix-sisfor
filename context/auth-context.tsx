@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { signIn, signOut, useSession } from "next-auth/react"
 import { Session as NextAuthSession } from "next-auth"
+import Cookies from 'js-cookie'
 
 // Remove the recursive reference in the Session type
 // Ensure the email property aligns with the expected type
@@ -49,6 +50,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+
+  // Add secure cookie storage
+  useEffect(() => {
+    if (sessionStatus === "authenticated" && session?.user) {
+      // Store session data in secure cookie
+      Cookies.set('auth-session', JSON.stringify({
+        user: session.user,
+        expires: session.expires
+      }), {
+        secure: true,
+        sameSite: 'strict',
+        expires: 7 // 7 days
+      })
+    } else if (sessionStatus === "unauthenticated") {
+      // Remove cookie if not authenticated
+      Cookies.remove('auth-session')
+    }
+  }, [session, sessionStatus])
+
+  // Add session restoration
+  useEffect(() => {
+    const storedSession = Cookies.get('auth-session')
+    if (!session && storedSession) {
+      try {
+        const parsedSession = JSON.parse(storedSession)
+        if (parsedSession.expires > new Date().toISOString()) {
+          // Session is still valid
+          router.refresh() // Refresh the session
+        } else {
+          // Session expired
+          Cookies.remove('auth-session')
+          router.push('/auth/login')
+        }
+      } catch (error) {
+        console.error('Error parsing stored session:', error)
+        Cookies.remove('auth-session')
+      }
+    }
+  }, [session, router])
 
   // Login function
   const login = async (email: string, password: string) => {

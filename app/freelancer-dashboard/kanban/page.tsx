@@ -137,6 +137,15 @@ export default function KanbanDashboardPage() {
         return "bg-gray-500 text-white"
     }
   }
+
+  const isProjectOverdue = (endDate?: string) => {
+    if (!endDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const projectEndDate = new Date(endDate);
+    projectEndDate.setHours(0, 0, 0, 0);
+    return today > projectEndDate;
+  }
   
   if (isLoading || !isLoaded) {
     return (
@@ -203,6 +212,7 @@ export default function KanbanDashboardPage() {
                   onToggleFavorite={toggleFavorite}
                   getRelativeTime={getRelativeTime}
                   getStatusColor={getStatusColor}
+                  isProjectOverdue={isProjectOverdue}
                 />
               ))
             ) : (
@@ -233,6 +243,7 @@ export default function KanbanDashboardPage() {
                   onToggleFavorite={toggleFavorite}
                   getRelativeTime={getRelativeTime}
                   getStatusColor={getStatusColor}
+                  isProjectOverdue={isProjectOverdue}
                 />
               ))
             ) : (
@@ -256,6 +267,7 @@ export default function KanbanDashboardPage() {
                   onToggleFavorite={toggleFavorite}
                   getRelativeTime={getRelativeTime}
                   getStatusColor={getStatusColor}
+                  isProjectOverdue={isProjectOverdue}
                 />
               ))
             ) : (
@@ -385,6 +397,7 @@ interface ProjectBoardCardProps {
   onToggleFavorite: (boardId: string) => void
   getRelativeTime: (dateString: string) => string
   getStatusColor: (status: string) => string
+  isProjectOverdue: (endDate?: string) => boolean
 }
 
 const ProjectBoardCard = ({ 
@@ -392,10 +405,21 @@ const ProjectBoardCard = ({
   isFavorite, 
   onToggleFavorite, 
   getRelativeTime,
-  getStatusColor
+  getStatusColor,
+  isProjectOverdue
 }: ProjectBoardCardProps) => {
+  const isOverdue = isProjectOverdue(board.project.endDate);
+  
   return (
-    <Card className="transition-all duration-300 hover:shadow-md h-full">
+    <Card className={`relative ${isOverdue && board.project.status !== 'completed' ? 'border-red-500 border-2' : ''}`}>
+      {isOverdue && board.project.status !== 'completed' && (
+        <Badge 
+          variant="destructive" 
+          className="absolute -top-2 -right-2 z-10"
+        >
+          Overdue
+        </Badge>
+      )}
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg truncate">{board.project.title}</CardTitle>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, FormEvent, useEffect } from "react"
+import { useState, FormEvent, useEffect, Fragment } from "react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
+import { showSuccessNotification, showErrorNotification } from "@/components/ui/notification"
 import Link from "next/link"
 import { Dialog as AlertDialog, DialogContent as AlertDialogContent, DialogHeader as AlertDialogHeader, DialogTitle as AlertDialogTitle, DialogFooter as AlertDialogFooter } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
@@ -40,7 +40,6 @@ interface Project {
 
 export default function FreelancerProjectsPage() {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
-  const { toast } = useToast()
   const router = useRouter()
 
   const [projects, setProjects] = useState<Project[]>([])
@@ -52,6 +51,8 @@ export default function FreelancerProjectsPage() {
   const [isManageMode, setIsManageMode] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "No date";
@@ -98,11 +99,10 @@ export default function FreelancerProjectsPage() {
     } catch (error) {
       console.error("Error fetching projects:", error)
       setError("Failed to load projects. Please try again.")
-      toast({
-        title: "Error loading projects",
-        description: "Failed to load your projects. Please try again.",
-        variant: "destructive"
-      })
+      showErrorNotification(
+        "Error Loading Projects",
+        "Failed to load your projects. Please try again."
+      )
       setIsLoaded(true)
     }
   }
@@ -165,16 +165,15 @@ export default function FreelancerProjectsPage() {
       setProjects(projects.filter((p) => p.id !== projectToDelete.id))
       setDeleteDialogOpen(false)
       setProjectToDelete(null)
-      toast({
-        title: "Success",
-        description: "Project deleted successfully",
-      })
+      showSuccessNotification(
+        "Project Deleted Successfully",
+        "Project deleted successfully"
+      )
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete project",
-        variant: "destructive",
-      })
+      showErrorNotification(
+        "Error Deleting Project",
+        "Failed to delete project"
+      )
     }
   }
 
@@ -201,17 +200,16 @@ export default function FreelancerProjectsPage() {
         )
       )
 
-      toast({
-        title: "Success",
-        description: "Project status updated successfully",
-      })
+      showSuccessNotification(
+        "Project Status Updated Successfully",
+        "Project status updated successfully"
+      )
     } catch (error) {
       console.error("Error updating project status:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update project status",
-        variant: "destructive",
-      })
+      showErrorNotification(
+        "Error Updating Project Status",
+        "Failed to update project status"
+      )
     }
   }
 
@@ -236,6 +234,11 @@ export default function FreelancerProjectsPage() {
       default:
         return "bg-gray-500"
     }
+  }
+
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project)
+    setIsDetailsModalOpen(true)
   }
 
   return (
@@ -277,11 +280,10 @@ export default function FreelancerProjectsPage() {
                   budget = parseFloat(budgetStr);
                   if (isNaN(budget)) throw new Error("Invalid budget");
                 } catch (error) {
-                  toast({
-                    title: "Invalid budget",
-                    description: "Please enter a valid number for budget",
-                    variant: "destructive",
-                  });
+                  showErrorNotification(
+                    "Invalid Budget",
+                    "Please enter a valid number for budget"
+                  )
                   return;
                 }
                 
@@ -312,19 +314,18 @@ export default function FreelancerProjectsPage() {
                   const data = await response.json()
                   setProjects([...projects, data])
                   setIsModalOpen(false)
-                  toast({
-                    title: "Success",
-                    description: "Project created successfully",
-                  })
+                  showSuccessNotification(
+                    "Project Created Successfully",
+                    `Your project "${projectData.title}" and its kanban board have been created successfully. You can now manage your tasks and track progress.`
+                  )
                   
                   fetchProjects();
                 } catch (error) {
                   console.error("Error creating project:", error)
-                  toast({
-                    title: "Error",
-                    description: "Failed to create project. Please try again.",
-                    variant: "destructive",
-                  })
+                  showErrorNotification(
+                    "Error Creating Project",
+                    "Failed to create project. Please try again."
+                  )
                 }
               }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
@@ -471,7 +472,7 @@ export default function FreelancerProjectsPage() {
           <>
             {/* Active Projects Section */}
             {filteredProjects.filter(project => project.status !== "completed").length > 0 && (
-              <>
+              <Fragment key="active-projects-section">
                 <h2 className="text-xl font-semibold col-span-full">Active Projects</h2>
                 {filteredProjects
                   .filter(project => project.status !== "completed")
@@ -489,9 +490,9 @@ export default function FreelancerProjectsPage() {
                                 <SelectValue>{project.status || "Unknown"}</SelectValue>
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="on-hold">On Hold</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem key="active" value="active">Active</SelectItem>
+                                <SelectItem key="on-hold" value="on-hold">On Hold</SelectItem>
+                                <SelectItem key="completed" value="completed">Completed</SelectItem>
                               </SelectContent>
                             </Select>
                             {isManageMode && (
@@ -534,12 +535,15 @@ export default function FreelancerProjectsPage() {
                       </CardContent>
                       <CardFooter className="pt-4 border-t">
                         <div className="flex gap-3 w-full">
-                          <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Eye className="h-3.5 w-3.5 mr-1" />
-                              View Details
-                            </Button>
-                          </Link>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleViewDetails(project)}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View Details
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -548,11 +552,10 @@ export default function FreelancerProjectsPage() {
                               if (project.kanbanBoardId) {
                                 window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
                               } else {
-                                toast({
-                                  title: "No Kanban board",
-                                  description: "This project doesn't have a Kanban board associated with it.",
-                                  variant: "destructive",
-                                });
+                                showErrorNotification(
+                                  "No Kanban Board",
+                                  "This project doesn't have a Kanban board associated with it."
+                                )
                               }
                             }}
                           >
@@ -563,12 +566,12 @@ export default function FreelancerProjectsPage() {
                       </CardFooter>
                     </Card>
                   ))}
-              </>
+              </Fragment>
             )}
 
             {/* Completed Projects Section */}
             {filteredProjects.filter(project => project.status === "completed").length > 0 && (
-              <>
+              <Fragment key="completed-projects-section">
                 <div className="col-span-full my-8">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -595,9 +598,9 @@ export default function FreelancerProjectsPage() {
                                 <SelectValue>{project.status || "Unknown"}</SelectValue>
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="on-hold">On Hold</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem key="active" value="active">Active</SelectItem>
+                                <SelectItem key="on-hold" value="on-hold">On Hold</SelectItem>
+                                <SelectItem key="completed" value="completed">Completed</SelectItem>
                               </SelectContent>
                             </Select>
                             {isManageMode && (
@@ -640,12 +643,15 @@ export default function FreelancerProjectsPage() {
                       </CardContent>
                       <CardFooter className="pt-4 border-t">
                         <div className="flex gap-3 w-full">
-                          <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Eye className="h-3.5 w-3.5 mr-1" />
-                              View Details
-                            </Button>
-                          </Link>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleViewDetails(project)}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View Details
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -654,11 +660,10 @@ export default function FreelancerProjectsPage() {
                               if (project.kanbanBoardId) {
                                 window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
                               } else {
-                                toast({
-                                  title: "No Kanban board",
-                                  description: "This project doesn't have a Kanban board associated with it.",
-                                  variant: "destructive",
-                                });
+                                showErrorNotification(
+                                  "No Kanban Board",
+                                  "This project doesn't have a Kanban board associated with it."
+                                )
                               }
                             }}
                           >
@@ -669,7 +674,7 @@ export default function FreelancerProjectsPage() {
                       </CardFooter>
                     </Card>
                   ))}
-              </>
+              </Fragment>
             )}
           </>
         ) : (
@@ -697,6 +702,92 @@ export default function FreelancerProjectsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="w-full max-w-screen-lg">
+          {selectedProject && (
+            <>
+              <DialogHeader>
+                <div className="flex justify-between items-start">
+                  <DialogTitle className="text-2xl">{selectedProject.title}</DialogTitle>
+                  <div className={`px-3 py-1 rounded-full text-sm text-white ${getStatusColor(selectedProject.status)}`}>
+                    {selectedProject.status}
+                  </div>
+                </div>
+                <p className="text-md text-muted-foreground">Client: {selectedProject.clientName}</p>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Description</h3>
+                  <p className="text-md">{selectedProject.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Timeline</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Start Date</p>
+                          <p>{formatDate(selectedProject.startDate)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Deadline</p>
+                          <p>{formatDate(selectedProject.endDate)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Details</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium">Rp</span>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Budget</p>
+                          <p>{formatCurrency(selectedProject.budget)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Assigned To</p>
+                          <p>{selectedProject.assignedTo}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter className="flex flex-wrap gap-4">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    if (selectedProject.kanbanBoardId) {
+                      window.location.href = `/freelancer-dashboard/kanban/${selectedProject.kanbanBoardId}`;
+                    } else {
+                      showErrorNotification(
+                        "No Kanban Board",
+                        "This project doesn't have a Kanban board associated with it."
+                      )
+                    }
+                  }}
+                >
+                  View Kanban Board
+                </Button>
+                <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AnimatedSection>
   )
 }

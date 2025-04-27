@@ -11,9 +11,13 @@ import {
   DialogDescription, 
   DialogHeader, 
   DialogTitle,
-  DialogClose
+  DialogClose,
+  DialogFooter
 } from "@/components/ui/dialog"
 import { useRBAC } from "@/hooks/use-rbac"
+import { formatDate, formatCurrency, getStatusColor } from "@/lib/utils"
+import { Clock, Users } from "lucide-react"
+import { showErrorNotification } from "@/components/ui/notification"
 
 type CalendarItem = {
   id: string
@@ -34,6 +38,19 @@ type RoleBasedCalendarProps = {
   boardId?: string // Optional board ID for navigation
 }
 
+interface Project {
+  id: string
+  title: string
+  clientName: string
+  startDate: string
+  endDate: string
+  budget: number
+  status: string
+  description: string
+  assignedTo: string
+  kanbanBoardId?: string
+}
+
 export function RoleBasedCalendar({ items = [], isLoading = false, boardId }: RoleBasedCalendarProps) {
   const { user, isAuthorized, isLoading: rbacLoading } = useRBAC(["student", "freelancer"])
   const router = useRouter()
@@ -41,6 +58,7 @@ export function RoleBasedCalendar({ items = [], isLoading = false, boardId }: Ro
   const [selectedDate, setSelectedDate] = useState<string | null>(null) // Store date as YYYY-MM-DD string
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null)
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
   // Detect user role
   const isStudent = user?.role === "student"
@@ -150,7 +168,7 @@ export function RoleBasedCalendar({ items = [], isLoading = false, boardId }: Ro
             if (dayItems.length !== 1) {
               setSelectedItem(null);
             } else {
-              setSelectedItem(dayItems[0]); // Auto-select if only one item
+              setSelectedItem(dayItems[0] as CalendarItem); // Auto-select if only one item
             }
           }}
           onDoubleClick={() => {
@@ -228,6 +246,32 @@ export function RoleBasedCalendar({ items = [], isLoading = false, boardId }: Ro
     });
   }
 
+  const handleViewDetails = (item: CalendarItem) => {
+    setSelectedItem(item)
+    setIsDetailsModalOpen(true)
+  }
+
+  const handleDateClick = (date: string) => {
+    setSelectedDate(date);
+    const dayItems = calendarItems.filter(item => {
+      const itemDate = item.endDate || item.dueDate;
+      if (!itemDate) return false;
+      try {
+        const itemDateObj = new Date(itemDate);
+        if (isNaN(itemDateObj.getTime())) return false;
+        return itemDateObj.toISOString().split('T')[0] === date;
+      } catch (error) {
+        return false;
+      }
+    });
+    
+    if (dayItems.length === 0) {
+      setSelectedItem(null);
+    } else {
+      setSelectedItem(dayItems[0]);
+    }
+  };
+
   // Loading state
   if (isLoading || rbacLoading) {
     return (
@@ -297,7 +341,7 @@ export function RoleBasedCalendar({ items = [], isLoading = false, boardId }: Ro
                   <li
                     key={item.id}
                     className="flex items-center justify-between p-2 text-sm rounded hover:bg-accent cursor-pointer transition-colors"
-                    onClick={() => setSelectedItem(item)}
+                    onClick={() => handleViewDetails(item as CalendarItem)}
                   >
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${
@@ -324,89 +368,97 @@ export function RoleBasedCalendar({ items = [], isLoading = false, boardId }: Ro
       </div>
 
       {/* Item Detail Dialog */}
-      <Dialog open={selectedItem !== null} onOpenChange={(open) => !open && setSelectedItem(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{isStudent ? "Assignment Details" : "Project Deadline"}</DialogTitle>
-            <DialogDescription>
-              {isStudent ? "View your assignment details" : "Project details and deadline information"}
-            </DialogDescription>
-          </DialogHeader>
-          
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="w-full max-w-screen-lg">
           {selectedItem && (
-            <div className="mt-4 space-y-4">
-              <div>
-                <h3 className="text-lg font-bold">{selectedItem.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {isStudent 
-                    ? (selectedItem.course || 'General Assignment')
-                    : (selectedItem.clientName || 'Client Project')
-                  }
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="font-medium">{isStudent ? "Due Date" : "Deadline"}</p>
-                  <p>
-                    {new Date(isStudent ? selectedItem.dueDate : selectedItem.endDate).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long', 
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
+            <>
+              <DialogHeader>
+                <div className="flex justify-between items-start">
+                  <DialogTitle className="text-2xl">{selectedItem.title}</DialogTitle>
+                  {selectedItem.status && (
+                    <div className={`px-3 py-1 rounded-full text-sm text-white ${getStatusColor(selectedItem.status)}`}>
+                      {selectedItem.status}
+                    </div>
+                  )}
                 </div>
+                <p className="text-md text-muted-foreground">
+                  {selectedItem.clientName ? `Client: ${selectedItem.clientName}` : selectedItem.course ? `Course: ${selectedItem.course}` : 'No client/course'}
+                </p>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {selectedItem.description && (
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Description</h3>
+                    <p className="text-md">{selectedItem.description}</p>
+                  </div>
+                )}
                 
-                <div>
-                  <p className="font-medium">Status</p>
-                  <div className="flex items-center">
-                    <div className={`w-2 h-2 rounded-full mr-2 ${
-                      selectedItem.status === 'completed' ? 'bg-green-600' :
-                      (selectedItem.status === 'in-progress' || selectedItem.status === 'active') ? 'bg-yellow-500' :
-                      'bg-red-500'
-                    }`}></div>
-                    <p className="capitalize">{selectedItem.status?.replace('-', ' ') || 'Unknown'}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Timeline</h3>
+                    <div className="space-y-2">
+                      {selectedItem.startDate && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">Start Date</p>
+                            <p>{formatDate(selectedItem.startDate)}</p>
+                          </div>
+                        </div>
+                      )}
+                      {(selectedItem.endDate || selectedItem.dueDate) && (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">Deadline</p>
+                            <p>{formatDate(selectedItem.endDate || selectedItem.dueDate || '')}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Details</h3>
+                    <div className="space-y-2">
+                      {selectedItem.budget !== undefined && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground font-medium">Rp</span>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Budget</p>
+                            <p>{formatCurrency(selectedItem.budget)}</p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedItem.assignedTo && (
+                        <div className="flex items-center gap-2">
+                          <Users className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">Assigned To</p>
+                            <p>{selectedItem.assignedTo}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
               
-              {selectedItem.description && (
-                <div>
-                  <p className="font-medium">Description</p>
-                  <p className="text-sm">{selectedItem.description}</p>
-                </div>
-              )}
-              
-              <div className="flex justify-end mt-4">
-                {isStudent ? (
-                  <Link href={selectedItem.kanbanBoardId ? 
-                    `/student-dashboard/kanban/${selectedItem.kanbanBoardId}` : 
-                    `/student-dashboard/assignments/${selectedItem.id}`
-                  }>
-                    <Button variant="outline" className="mr-2">
-                      {selectedItem.kanbanBoardId ? 'View in Kanban' : 'View Full Details'}
-                    </Button>
-                  </Link>
-                ) : (
+              <DialogFooter className="flex flex-wrap gap-4">
+                {selectedItem.kanbanBoardId && (
                   <Button
-                    variant="outline"
-                    className="mr-2"
+                    variant="secondary"
                     onClick={() => {
-                      router.push(`/freelancer-dashboard/projects/${selectedItem.id}`);
-                      setSelectedItem(null);
+                      window.location.href = `/freelancer-dashboard/kanban/${selectedItem.kanbanBoardId}`;
                     }}
                   >
-                    View Project Details
+                    View Kanban Board
                   </Button>
                 )}
-                <DialogClose asChild>
-                  <Button>Close</Button>
-                </DialogClose>
-              </div>
-            </div>
+                <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>Close</Button>
+              </DialogFooter>
+            </>
           )}
         </DialogContent>
       </Dialog>

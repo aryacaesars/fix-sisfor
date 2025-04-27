@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AnimatedSection } from "@/components/animated-section"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { useAuth } from "@/context/auth-context"
 
 export default function LoginPage() {
@@ -20,7 +20,6 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const verified = searchParams.get("verified") === "true"
-  const { toast } = useToast()
   const { login, user, isCheckingAuth } = useAuth() // Add `user` and `isCheckingAuth` here
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,19 +32,18 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user?.role && !isCheckingAuth) {
+      // Remove toast here since it will be handled in handleSubmit
       router.push(user.role === "student" ? "/student-dashboard" : "/freelancer-dashboard")
     }
-  }, [user, router, toast, isCheckingAuth])
+  }, [user, router, isCheckingAuth])
 
-  // Add this after your state declarations
   useEffect(() => {
     if (verified) {
-      toast({
-        title: "Email verified",
-        description: "Your email has been verified. You can now log in.",
+      toast.success("Email Verified Successfully", {
+        description: "Your email has been verified. You can now log in to your account.",
       })
     }
-  }, [verified, toast])
+  }, [verified])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -57,7 +55,6 @@ export default function LoginPage() {
     setFormData((prev) => ({ ...prev, rememberMe: checked }))
   }
 
-  // Modify your handleSubmit function to handle verification errors
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -70,34 +67,42 @@ export default function LoginPage() {
       })
       const data = await response.json()
       if (!response.ok) {
-        // Jika error karena email belum diverifikasi
         if (data.error && data.error.toLowerCase().includes("belum diverifikasi")) {
           setError("Email belum diverifikasi. Silakan cek email Anda untuk verifikasi.")
-          toast({
-            title: "Verifikasi diperlukan",
-            description: "Silakan cek email Anda untuk link verifikasi atau minta ulang.",
-            variant: "destructive",
+          toast.error("Verification Required", {
+            description: "Please check your email for the verification link or request a new one.",
+            action: {
+              label: "Verify Email",
+              onClick: () => router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`),
+            },
           })
-          router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`)
           setIsLoading(false)
           return
         }
         setError(data.error || "Failed to login")
+        toast.error("Login Failed", {
+          description: data.error || "An error occurred while logging in",
+        })
         setIsLoading(false)
         return
       }
-      // Hanya panggil login context jika response.ok
       const loginResult = await login(formData.email, formData.password)
       if (loginResult.success) {
-        toast({
-          title: "Login Success",
-          description: "Welcome back!",
+        toast.success("Login Successful", {
+          description: "Welcome back! Redirecting to your dashboard...",
         })
+        // Remove the router.push here since it's already handled in the useEffect
       } else {
         setError(loginResult.message)
+        toast.error("Login Failed", {
+          description: loginResult.message,
+        })
       }
     } catch (err) {
       setError("An error occurred while logging in")
+      toast.error("Login Error", {
+        description: "An unexpected error occurred. Please try again later.",
+      })
     } finally {
       setIsLoading(false)
     }

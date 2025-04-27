@@ -14,11 +14,15 @@ import { useToast } from "@/components/ui/use-toast"
 import { AnimatedSection } from "@/components/animated-section"
 import { Plus, Calendar, ArrowLeft } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
+import { showErrorNotification, showSuccessNotification } from "@/components/ui/notification"
 
 interface KanbanBoard {
   id: string
   title: string
   description: string
+  assignment: {
+    dueDate: string | null
+  }
 }
 
 interface KanbanColumn {
@@ -47,6 +51,8 @@ export default function KanbanBoardPage() {
   const [columns, setColumns] = useState<KanbanColumn[]>([])
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false)
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false)
+  const [isTaskDetailDialogOpen, setIsTaskDetailDialogOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null)
   const [activeColumn, setActiveColumn] = useState<string | null>(null)
   const [taskFormData, setTaskFormData] = useState({
     title: "",
@@ -85,6 +91,7 @@ export default function KanbanBoardPage() {
         throw new Error("Failed to fetch board data")
       }
       const boardData = await boardResponse.json()
+      console.log("Board Data:", boardData) // Debug log
       setBoard(boardData)
       
       // Fetch columns with tasks
@@ -97,17 +104,40 @@ export default function KanbanBoardPage() {
       setColumns(columnsData)
     } catch (error) {
       console.error("Error fetching Kanban data:", error)
-      toast({
-        title: "Error loading Kanban board",
-        description: "Failed to load board data. Please try again.",
-        variant: "destructive"
-      })
+      showErrorNotification(
+        "Error loading Kanban board",
+        "Failed to load board data. Please try again."
+      )
     }
   }
   
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!activeColumn) return
+    
+    // Check if the column already has 3 tasks
+    const activeColumnData = columns.find(col => col.id === activeColumn)
+    if (activeColumnData && activeColumnData.tasks.length >= 3) {
+      showErrorNotification(
+        "Maximum tasks reached",
+        "Each column can only have a maximum of 3 tasks"
+      )
+      return
+    }
+    
+    // Check if task due date exceeds assignment due date
+    if (taskFormData.dueDate && board?.assignment?.dueDate) {
+      const taskDueDate = new Date(taskFormData.dueDate)
+      const assignmentDueDate = new Date(board.assignment.dueDate)
+      
+      if (taskDueDate > assignmentDueDate) {
+        showErrorNotification(
+          "Invalid Due Date",
+          "Task due date cannot exceed assignment due date!"
+        )
+        return
+      }
+    }
     
     try {
       const response = await fetch("/api/kanban/tasks", {
@@ -122,8 +152,12 @@ export default function KanbanBoardPage() {
       })
       
       if (!response.ok) {
-        console.error("Failed to create task:", await response.text())
-        throw new Error("Failed to create task")
+        const errorData = await response.json()
+        showErrorNotification(
+          "Error creating task",
+          errorData.error || "Failed to create task"
+        )
+        return
       }
       
       const newTask = await response.json()
@@ -148,17 +182,16 @@ export default function KanbanBoardPage() {
       })
       setIsAddTaskDialogOpen(false)
       
-      toast({
-        title: "Task created",
-        description: "New task has been added to the board"
-      })
+      showSuccessNotification(
+        "Task created",
+        "New task has been added to the board"
+      )
     } catch (error) {
       console.error("Error creating task:", error)
-      toast({
-        title: "Error creating task",
-        description: "Failed to create task. Please try again.",
-        variant: "destructive"
-      })
+      showErrorNotification(
+        "Error creating task",
+        "Failed to create task. Please try again."
+      )
     }
   }
   
@@ -226,6 +259,16 @@ export default function KanbanBoardPage() {
     
     // Only proceed if moving to a different column
     if (draggedTask.columnId === targetColumnId) return
+
+    // Check if target column already has 3 tasks
+    const targetColumn = columns.find(col => col.id === targetColumnId)
+    if (targetColumn && targetColumn.tasks.length >= 3) {
+      showErrorNotification(
+        "Cannot move task",
+        "Target column already has the maximum of 3 tasks"
+      )
+      return
+    }
     
     try {
       // Optimistically update UI
@@ -268,13 +311,50 @@ export default function KanbanBoardPage() {
       }
     } catch (error) {
       console.error("Error moving task:", error)
-      toast({
-        title: "Error moving task",
-        description: "Failed to update task position. Please try again.",
-        variant: "destructive"
-      })
+      showErrorNotification(
+        "Error moving task",
+        "Failed to update task position. Please try again."
+      )
     } finally {
       setDraggedTask(null)
+    }
+  }
+  
+  const handleTaskDelete = async () => {
+    if (!selectedTask) return
+
+    try {
+      const response = await fetch(`/api/kanban/tasks/${selectedTask.id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        showErrorNotification(
+          "Error deleting task",
+          errorData.error || "Failed to delete task"
+        )
+        return
+      }
+
+      // Remove the task from the columns state
+      setColumns(columns.map(column => ({
+        ...column,
+        tasks: column.tasks.filter(task => task.id !== selectedTask.id)
+      })))
+
+      setIsTaskDetailDialogOpen(false)
+      setSelectedTask(null)
+      showSuccessNotification(
+        "Task deleted",
+        "Task has been deleted successfully"
+      )
+    } catch (error) {
+      console.error("Error deleting task:", error)
+      showErrorNotification(
+        "Error deleting task",
+        "Failed to delete task. Please try again."
+      )
     }
   }
   
@@ -298,23 +378,34 @@ export default function KanbanBoardPage() {
   return (
     <AnimatedSection>
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-2">
-          <Link href="/student-dashboard/assignments">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Assignments
-            </Button>
-          </Link>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <Link href="/student-dashboard/assignments">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Assignments
+                </Button>
+              </Link>
+            </div>
+            <h1 className="text-3xl font-bold">{board?.title || "Kanban Board"}</h1>
+            <p className="text-muted-foreground">{board?.description}</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsAddColumnDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Column
+          </Button>
         </div>
-        <h1 className="text-3xl font-bold">{board?.title || "Kanban Board"}</h1>
-        <p className="text-muted-foreground">{board?.description}</p>
       </div>
       
-      <div className="flex gap-6 overflow-x-auto pb-8">
+      <div className="grid grid-cols-3 gap-6 pb-8">
         {columns.map(column => (
           <div 
             key={column.id} 
-            className="flex-shrink-0 w-80"
+            className="flex-shrink-0"
             onDragOver={(e) => handleDragOver(e, column.id)}
             onDrop={(e) => handleDrop(e, column.id)}
           >
@@ -328,14 +419,18 @@ export default function KanbanBoardPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-2">
-                {column.tasks.map(task => (
+                {column.tasks.slice(0, 3).map(task => (
                   <div 
                     key={task.id}
                     draggable
                     onDragStart={() => handleDragStart(task)}
-                    className="mb-2 cursor-move"
+                    onClick={() => {
+                      setSelectedTask(task)
+                      setIsTaskDetailDialogOpen(true)
+                    }}
+                    className="mb-2 cursor-pointer hover:shadow-md transition-shadow"
                   >
-                    <Card className="hover:shadow-md transition-shadow">
+                    <Card>
                       <CardContent className="p-3">
                         <div className="flex justify-between items-start">
                           <h3 className="font-medium text-sm">{task.title}</h3>
@@ -362,6 +457,12 @@ export default function KanbanBoardPage() {
                   </div>
                 ))}
                 
+                {column.tasks.length > 3 && (
+                  <div className="text-center text-sm text-muted-foreground mt-2">
+                    +{column.tasks.length - 3} more tasks
+                  </div>
+                )}
+                
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -378,17 +479,6 @@ export default function KanbanBoardPage() {
             </Card>
           </div>
         ))}
-        
-        <div className="flex-shrink-0 w-80">
-          <Button 
-            variant="outline" 
-            className="h-12 w-full border-dashed"
-            onClick={() => setIsAddColumnDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Column
-          </Button>
-        </div>
       </div>
       
       {/* Add Task Dialog */}
@@ -443,13 +533,67 @@ export default function KanbanBoardPage() {
                   type="date"
                   value={taskFormData.dueDate}
                   onChange={(e) => setTaskFormData({...taskFormData, dueDate: e.target.value})}
+                  max={board?.assignment?.dueDate || undefined}
                 />
               </div>
+
+              {board?.assignment?.dueDate ? (
+                <div className="text-sm text-muted-foreground mt-2">
+                  <p className="font-medium">Assignment Deadline:</p>
+                  <p>{new Date(board.assignment.dueDate).toLocaleDateString()}</p>
+                  <p className="mt-1 text-xs">Note: Task due date cannot exceed this deadline</p>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground mt-2">
+                  <p className="text-amber-500">No deadline set for this assignment</p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="submit">Add Task</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Task Detail Dialog */}
+      <Dialog open={isTaskDetailDialogOpen} onOpenChange={setIsTaskDetailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Task Details</DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium">{selectedTask.title}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{selectedTask.description}</p>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className={`h-2 w-2 rounded-full ${
+                  selectedTask.priority === "high" ? "bg-red-500" : 
+                  selectedTask.priority === "medium" ? "bg-amber-500" : "bg-green-500"
+                }`}></div>
+                <span className="text-sm capitalize">{selectedTask.priority} priority</span>
+              </div>
+              
+              {selectedTask.dueDate && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Due {new Date(selectedTask.dueDate).toLocaleDateString()}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="destructive"
+                  onClick={handleTaskDelete}
+                >
+                  Delete Task
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       

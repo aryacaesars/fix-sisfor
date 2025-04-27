@@ -14,7 +14,6 @@ export async function GET(request: Request) {
     // Get query parameters
     const { searchParams } = new URL(request.url)
     const category = searchParams.get("category")
-    const type = searchParams.get("type")
 
     // Build the where clause
     const where: any = {
@@ -23,10 +22,6 @@ export async function GET(request: Request) {
 
     if (category) {
       where.category = category
-    }
-
-    if (type) {
-      where.type = type
     }
 
     // Get templates for the user
@@ -51,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { title, description, type, category, link } = body // Ganti content menjadi link
+    const { title, description, category, link } = body
 
     if (!title || !link) {
       return NextResponse.json({ error: "Title and link are required" }, { status: 400 })
@@ -62,9 +57,8 @@ export async function POST(request: Request) {
       data: {
         title,
         description,
-        type: type || "document",
         category: category || "general",
-        link, // Simpan link ke database
+        link,
         userId: session.user.id,
       },
     })

@@ -11,12 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AnimatedSection } from "@/components/animated-section"
 import { Save } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
-import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
+import { showErrorNotification, showSuccessNotification } from "@/components/ui/notification"
 
 export default function FreelancerSettingsPage() {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"])
-  const { toast } = useToast()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
@@ -47,17 +46,16 @@ export default function FreelancerSettingsPage() {
       } catch (error) {
         console.error("Error fetching settings:", error)
         setError("Failed to load settings. Please try again.")
-        toast({
-          title: "Error loading settings",
-          description: "Failed to load your settings. Please try again.",
-          variant: "destructive"
-        })
+        showErrorNotification(
+          "Error loading settings",
+          "Failed to load your settings. Please try again."
+        )
         setIsLoaded(true)
       }
     }
 
     fetchSettings()
-  }, [toast])
+  }, [])
 
   if (isLoading || !isLoaded) {
     return (
@@ -125,17 +123,16 @@ export default function FreelancerSettingsPage() {
         throw new Error("Failed to save settings")
       }
 
-      toast({
-        title: "Settings saved",
-        description: "Your preferences have been updated successfully.",
-      })
+      showSuccessNotification(
+        "Settings saved",
+        "Your preferences have been updated successfully."
+      )
     } catch (error) {
       console.error("Error saving settings:", error)
-      toast({
-        title: "Error saving settings",
-        description: "There was a problem saving your settings. Please try again.",
-        variant: "destructive",
-      })
+      showErrorNotification(
+        "Error saving settings",
+        "There was a problem saving your settings. Please try again."
+      )
     } finally {
       setIsSaving(false)
     }

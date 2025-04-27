@@ -166,7 +166,6 @@ model Template {
   id          String   @id @default(cuid())
   title       String
   description String?
-  type        String
   category    String
   userId      String
   createdAt   DateTime @default(now())

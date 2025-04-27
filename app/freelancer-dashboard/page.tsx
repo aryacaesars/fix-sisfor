@@ -1,26 +1,41 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Home, Briefcase, LayoutGrid, FileText, Settings, User, Calculator, ExternalLink, Calendar as CalendarIcon, ArrowLeft, ArrowRight } from "lucide-react"
+import { Home, Briefcase, LayoutGrid, FileText, Settings, User, Calculator, ExternalLink, Calendar as CalendarIcon, ArrowLeft, ArrowRight, Search, Star, StarOff, Kanban, Clock, Calendar, Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { AnimatedSection } from "@/components/animated-section"
 import { useRBAC } from "@/hooks/use-rbac"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { RoleBasedCalendar } from "@/components/role-based-calendar"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { showSuccessNotification, showErrorNotification } from "@/components/ui/notification"
+
+interface Project {
+  id: string
+  title: string
+  clientName: string
+  startDate: string
+  endDate: string
+  budget: number
+  status: string
+  description: string
+  assignedTo: string
+  kanbanBoardId?: string
+}
 
 export default function FreelancerDashboard() {
   const { isAuthorized, isLoading, user } = useRBAC(["freelancer"])
   const router = useRouter()
-  const [projects, setProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [kanbanBoards, setKanbanBoards] = useState<any[]>([])
   const [templates, setTemplates] = useState<any[]>([])
   const [isDataLoading, setIsDataLoading] = useState(true)
-  const [selectedProjectForDialog, setSelectedProjectForDialog] = useState<any>(null)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -63,7 +78,7 @@ export default function FreelancerDashboard() {
   useEffect(() => {
     if (!isDataLoading && projects.length > 0 && user?.id) {
       const today = new Date("2025-04-19"); // gunakan tanggal context
-      projects.forEach((project: any) => {
+      projects.forEach((project: Project) => {
         if (!project.endDate) return;
         const endDate = new Date(project.endDate);
         const diff = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -82,14 +97,53 @@ export default function FreelancerDashboard() {
     }
   }, [isDataLoading, projects, user, toast]);
 
-  // Helper function to format date
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "No date";
+    
     try {
-      return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } catch (e) {
-      return 'Invalid Date';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "Invalid date";
+      }
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch (error) {
+      return "Invalid date";
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return "Rp 0"
+    }
+    
+    try {
+      return new Intl.NumberFormat("id-ID", { 
+        style: "currency", 
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount)
+    } catch (error) {
+      return "Rp 0"
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-yellow-500"
+      case "completed":
+        return "bg-green-500"
+      case "on-hold":
+        return "bg-red-500"
+      default:
+        return "bg-gray-500"
+    }
+  };
+
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project)
+    setIsDetailsModalOpen(true)
   }
 
   // Filter and sort projects for cards
@@ -123,25 +177,40 @@ export default function FreelancerDashboard() {
         {/* Active Projects Card */}
         <Card className="transition-all duration-300 hover:shadow-md flex flex-col">
           <CardHeader className="pb-2">
-            <CardTitle>Active Projects</CardTitle>
-            <CardDescription>Your current client projects</CardDescription>
+            <CardTitle>Kanban Boards</CardTitle>
+            <CardDescription>Your active project boards</CardDescription>
           </CardHeader>
           <CardContent className="flex-grow">
             {isDataLoading ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-                <p className="text-sm text-muted-foreground">Loading projects...</p>
+                <p className="text-sm text-muted-foreground">Loading boards...</p>
               </div>
             ) : activeProjects.length > 0 ? (
               <ul className="space-y-1 text-sm">
                 {activeProjects.slice(0, 3).map((project) => (
                   <li key={project.id} className="p-2 rounded hover:bg-accent transition-colors">
-                    <Link href={`/freelancer-dashboard/projects/${project.id}`} className="flex justify-between items-center w-full">
+                    <div className="flex justify-between items-center w-full">
                       <span className="truncate font-medium">{project.title}</span>
-                      <span className="text-muted-foreground text-xs capitalize flex-shrink-0 ml-2">
-                        Due {formatDate(project.endDate)}
-                      </span>
-                    </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={() => {
+                          if (project.kanbanBoardId) {
+                            window.location.href = `/freelancer-dashboard/kanban/${project.kanbanBoardId}`;
+                          } else {
+                            showErrorNotification(
+                              "No Kanban Board",
+                              "This project doesn't have a Kanban board associated with it."
+                            )
+                          }
+                        }}
+                      >
+                        <Kanban className="h-4 w-4 mr-1" />
+                        View Board
+                      </Button>
+                    </div>
                   </li>
                 ))}
                 {activeProjects.length > 3 && <li className="text-xs text-muted-foreground px-2 pt-1">...and {activeProjects.length - 3} more</li>}
@@ -156,9 +225,9 @@ export default function FreelancerDashboard() {
             )}
           </CardContent>
           <CardFooter>
-            <Link href="/freelancer-dashboard/projects" className="w-full">
+            <Link href="/freelancer-dashboard/kanban" className="w-full">
               <Button variant="outline" className="w-full flex items-center justify-center gap-2">
-                <span>View All Projects</span>
+                <span>View All Kanban Boards</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -235,15 +304,10 @@ export default function FreelancerDashboard() {
                   <li
                     key={project.id}
                     className="flex justify-between items-center p-2 rounded hover:bg-accent cursor-pointer transition-colors"
-                    onClick={() => setSelectedProjectForDialog(project)}
+                    onClick={() => handleViewDetails(project)}
                   >
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        project.status === 'completed' ? 'bg-green-500' :
-                        project.status === 'active' ? 'bg-yellow-500' :
-                        project.status === 'on-hold' ? 'bg-red-500' :
-                        'bg-gray-500'
-                      }`}></div>
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)}`}></div>
                       <span className="truncate font-medium">{project.title}</span>
                     </div>
                     <span className="text-muted-foreground text-xs flex-shrink-0 ml-2">
@@ -479,63 +543,88 @@ export default function FreelancerDashboard() {
 </Card>
       </div>
        {/* Dialog for Upcoming Deadlines Card */}
-      <Dialog open={selectedProjectForDialog !== null} onOpenChange={(open) => !open && setSelectedProjectForDialog(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Project Deadline</DialogTitle>
-            <DialogDescription>
-              Project details and deadline information.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedProjectForDialog && (
-             <div className="mt-4 space-y-4">
-              <div>
-                <h3 className="text-lg font-bold">{selectedProjectForDialog.title}</h3>
-                <p className="text-sm text-muted-foreground">{selectedProjectForDialog.clientName || 'Client Project'}</p>
-              </div>
-              {/* ... (rest of the dialog content is the same as in DeadlineCalendar) ... */}
-               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="font-medium">Deadline</p>
-                  <p>
-                    {new Date(selectedProjectForDialog.endDate).toLocaleDateString('en-US', {
-                      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </p>
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="w-full max-w-screen-lg">
+          {selectedProject && (
+            <>
+              <DialogHeader>
+                <div className="flex justify-between items-start">
+                  <DialogTitle className="text-2xl">{selectedProject.title}</DialogTitle>
+                  <div className={`px-3 py-1 rounded-full text-sm text-white ${getStatusColor(selectedProject.status)}`}>
+                    {selectedProject.status}
+                  </div>
                 </div>
+                <p className="text-md text-muted-foreground">Client: {selectedProject.clientName}</p>
+              </DialogHeader>
+              
+              <div className="space-y-6">
                 <div>
-                  <p className="font-medium">Status</p>
-                  <div className="flex items-center">
-                    <div className={`w-2 h-2 rounded-full mr-2 ${
-                      selectedProjectForDialog.status === 'completed' ? 'bg-green-600' :
-                      selectedProjectForDialog.status === 'active' ? 'bg-primary' :
-                      'bg-yellow-500'
-                    }`}></div>
-                    <p className="capitalize">{selectedProjectForDialog.status?.replace('-', ' ') || 'Unknown'}</p>
+                  <h3 className="text-lg font-medium mb-2">Description</h3>
+                  <p className="text-md">{selectedProject.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Timeline</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Start Date</p>
+                          <p>{formatDate(selectedProject.startDate)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Deadline</p>
+                          <p>{formatDate(selectedProject.endDate)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Details</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium">Rp</span>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Budget</p>
+                          <p>{formatCurrency(selectedProject.budget)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Assigned To</p>
+                          <p>{selectedProject.assignedTo}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              {selectedProjectForDialog.description && (
-                <div>
-                  <p className="font-medium">Description</p>
-                  <p className="text-sm">{selectedProjectForDialog.description}</p>
-                </div>
-              )}
-              <div className="flex justify-end mt-4">
+              
+              <DialogFooter className="flex flex-wrap gap-4">
                 <Button
-                  variant="outline" className="mr-2"
+                  variant="secondary"
                   onClick={() => {
-                    router.push(`/freelancer-dashboard/projects/${selectedProjectForDialog.id}`);
-                    setSelectedProjectForDialog(null);
+                    if (selectedProject.kanbanBoardId) {
+                      window.location.href = `/freelancer-dashboard/kanban/${selectedProject.kanbanBoardId}`;
+                    } else {
+                      showErrorNotification(
+                        "No Kanban Board",
+                        "This project doesn't have a Kanban board associated with it."
+                      )
+                    }
                   }}
                 >
-                  View Project Details
+                  View Kanban Board
                 </Button>
-                <DialogClose asChild>
-                  <Button onClick={() => setSelectedProjectForDialog(null)}>Close</Button>
-                </DialogClose>
-              </div>
-            </div>
+                <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>Close</Button>
+              </DialogFooter>
+            </>
           )}
         </DialogContent>
       </Dialog>

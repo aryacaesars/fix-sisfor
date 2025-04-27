@@ -11,14 +11,13 @@ import { AnimatedSection } from "@/components/animated-section";
 import { Save } from "lucide-react";
 import { useRBAC } from "@/hooks/use-rbac";
 import { useAuth } from "@/context/auth-context";
-import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import freelancerNavItems from "@/app/freelancer-dashboard/layout";
+import { showSuccessNotification, showErrorNotification } from "@/components/ui/notification";
 
 const FreelancerAccountPage = () => {
   const { isAuthorized, isLoading } = useRBAC(["freelancer"]);
   const { user } = useAuth();
-  const { toast } = useToast();
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState({
@@ -91,16 +90,15 @@ const FreelancerAccountPage = () => {
         user.name = updatedUser.name;
       }
 
-      toast({
-        title: "Profile updated",
-        description: "Your profile information has been updated successfully.",
-      });
+      showSuccessNotification(
+        "Profile updated",
+        "Your profile information has been updated successfully."
+      );
     } catch (error) {
-      toast({
-        title: "Update failed",
-        description: "There was a problem updating your profile. Please try again.",
-        variant: "destructive",
-      });
+      showErrorNotification(
+        "Update failed",
+        "There was a problem updating your profile. Please try again."
+      );
     } finally {
       setIsUpdating(false);
     }

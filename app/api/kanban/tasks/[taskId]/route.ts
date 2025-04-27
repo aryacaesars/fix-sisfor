@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -93,6 +92,26 @@ export async function PATCH(
           { error: "Cannot move task to a column in a different board" },
           { status: 400 }
         );
+      }
+    }
+
+    // Validate due date against project end date
+    if (data.dueDate) {
+      const project = await prisma.project.findFirst({
+        where: { kanbanBoardId: task.column.boardId },
+        select: { endDate: true }
+      });
+
+      if (project?.endDate) {
+        const taskDueDate = new Date(data.dueDate);
+        const projectEndDate = new Date(project.endDate);
+        
+        if (taskDueDate > projectEndDate) {
+          return NextResponse.json(
+            { error: "Task due date cannot exceed project deadline" },
+            { status: 400 }
+          );
+        }
       }
     }
 

@@ -14,7 +14,6 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fix: Extract boardId after awaiting params
     const { boardId } = params;
 
     // Fetch the board
@@ -28,11 +27,20 @@ export async function GET(
 
     // Check if the user has access to this board
     if (board.createdById !== session.user.id) {
-      // You could add more complex permission checks here
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    return NextResponse.json(board);
+    // Fetch the associated project
+    const project = await prisma.project.findFirst({
+      where: { kanbanBoardId: boardId },
+      select: { endDate: true }
+    });
+
+    // Return board data with project end date
+    return NextResponse.json({
+      ...board,
+      projectEndDate: project?.endDate
+    });
   } catch (error) {
     console.error("Error fetching board:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

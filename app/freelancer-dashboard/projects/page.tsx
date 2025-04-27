@@ -51,6 +51,8 @@ export default function FreelancerProjectsPage() {
   const [isManageMode, setIsManageMode] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "No date";
@@ -232,6 +234,11 @@ export default function FreelancerProjectsPage() {
       default:
         return "bg-gray-500"
     }
+  }
+
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project)
+    setIsDetailsModalOpen(true)
   }
 
   return (
@@ -465,7 +472,7 @@ export default function FreelancerProjectsPage() {
           <>
             {/* Active Projects Section */}
             {filteredProjects.filter(project => project.status !== "completed").length > 0 && (
-              <Fragment key="active-projects">
+              <Fragment key="active-projects-section">
                 <h2 className="text-xl font-semibold col-span-full">Active Projects</h2>
                 {filteredProjects
                   .filter(project => project.status !== "completed")
@@ -528,12 +535,15 @@ export default function FreelancerProjectsPage() {
                       </CardContent>
                       <CardFooter className="pt-4 border-t">
                         <div className="flex gap-3 w-full">
-                          <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Eye className="h-3.5 w-3.5 mr-1" />
-                              View Details
-                            </Button>
-                          </Link>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleViewDetails(project)}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View Details
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -561,7 +571,7 @@ export default function FreelancerProjectsPage() {
 
             {/* Completed Projects Section */}
             {filteredProjects.filter(project => project.status === "completed").length > 0 && (
-              <Fragment key="completed-projects">
+              <Fragment key="completed-projects-section">
                 <div className="col-span-full my-8">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -633,12 +643,15 @@ export default function FreelancerProjectsPage() {
                       </CardContent>
                       <CardFooter className="pt-4 border-t">
                         <div className="flex gap-3 w-full">
-                          <Link href={`/freelancer-dashboard/projects/${project.id}`} passHref className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Eye className="h-3.5 w-3.5 mr-1" />
-                              View Details
-                            </Button>
-                          </Link>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleViewDetails(project)}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View Details
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -689,6 +702,92 @@ export default function FreelancerProjectsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="w-full max-w-screen-lg">
+          {selectedProject && (
+            <>
+              <DialogHeader>
+                <div className="flex justify-between items-start">
+                  <DialogTitle className="text-2xl">{selectedProject.title}</DialogTitle>
+                  <div className={`px-3 py-1 rounded-full text-sm text-white ${getStatusColor(selectedProject.status)}`}>
+                    {selectedProject.status}
+                  </div>
+                </div>
+                <p className="text-md text-muted-foreground">Client: {selectedProject.clientName}</p>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Description</h3>
+                  <p className="text-md">{selectedProject.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Timeline</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Start Date</p>
+                          <p>{formatDate(selectedProject.startDate)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Deadline</p>
+                          <p>{formatDate(selectedProject.endDate)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Details</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium">Rp</span>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Budget</p>
+                          <p>{formatCurrency(selectedProject.budget)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Assigned To</p>
+                          <p>{selectedProject.assignedTo}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter className="flex flex-wrap gap-4">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    if (selectedProject.kanbanBoardId) {
+                      window.location.href = `/freelancer-dashboard/kanban/${selectedProject.kanbanBoardId}`;
+                    } else {
+                      showErrorNotification(
+                        "No Kanban Board",
+                        "This project doesn't have a Kanban board associated with it."
+                      )
+                    }
+                  }}
+                >
+                  View Kanban Board
+                </Button>
+                <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AnimatedSection>
   )
 }

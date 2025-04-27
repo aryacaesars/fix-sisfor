@@ -17,13 +17,19 @@ export function formatBytes(bytes: number, decimals = 2) {
   return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
 }
 
-export function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
-}
+export const formatDate = (dateString: string | undefined | null) => {
+  if (!dateString) return "No date";
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch (error) {
+    return "Invalid date";
+  }
+};
 
 export function formatDateWithTime(date: Date | string) {
   return new Date(date).toLocaleString("en-US", {
@@ -43,4 +49,34 @@ export function getInitials(name: string) {
     .toUpperCase()
     .substring(0, 2)
 }
+
+export const formatCurrency = (amount: number | undefined | null) => {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return "Rp 0"
+  }
+  
+  try {
+    return new Intl.NumberFormat("id-ID", { 
+      style: "currency", 
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)
+  } catch (error) {
+    return "Rp 0"
+  }
+};
+
+export const getStatusColor = (status: string | undefined | null) => {
+  switch (status) {
+    case "active":
+      return "bg-yellow-500"
+    case "completed":
+      return "bg-green-500"
+    case "on-hold":
+      return "bg-red-500"
+    default:
+      return "bg-gray-500"
+  }
+};
 

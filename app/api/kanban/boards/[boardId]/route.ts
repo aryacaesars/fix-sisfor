@@ -30,16 +30,18 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Fetch the associated project
-    const project = await prisma.project.findFirst({
+    // Fetch the associated assignment
+    const assignment = await prisma.assignment.findFirst({
       where: { kanbanBoardId: boardId },
-      select: { endDate: true }
+      select: { dueDate: true }
     });
 
-    // Return board data with project end date
+    // Return board data with assignment due date
     return NextResponse.json({
       ...board,
-      projectEndDate: project?.endDate
+      assignment: {
+        dueDate: assignment?.dueDate
+      }
     });
   } catch (error) {
     console.error("Error fetching board:", error);

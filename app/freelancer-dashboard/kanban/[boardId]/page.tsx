@@ -14,7 +14,7 @@ import { toast } from "sonner"
 import { AnimatedSection } from "@/components/animated-section"
 import { Plus, Calendar, ArrowLeft, Pencil, Trash2 } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
-import { showErrorNotification } from "@/components/ui/notification"
+import { showErrorNotification, showSuccessNotification } from "@/components/ui/notification"
 
 interface KanbanBoard {
   id: string
@@ -96,7 +96,10 @@ export default function KanbanBoardPage() {
       setColumns(columnsData)
     } catch (error) {
       console.error("Error fetching Kanban data:", error)
-      toast.error("Failed to load board data. Please try again.")
+      showErrorNotification(
+        "Error loading Kanban board",
+        "Failed to load board data. Please try again."
+      )
     }
   }
 
@@ -125,16 +128,22 @@ export default function KanbanBoardPage() {
     e.preventDefault()
     if (!activeColumn) return
     
+    // Check if the column already has 3 tasks
+    const activeColumnData = columns.find(col => col.id === activeColumn)
+    if (activeColumnData && activeColumnData.tasks.length >= 3) {
+      showErrorNotification(
+        "Maximum tasks reached",
+        "Each column can only have a maximum of 3 tasks"
+      )
+      return
+    }
+    
     // Check if task due date exceeds project end date
     if (taskFormData.dueDate && board?.projectEndDate) {
       const taskDueDate = new Date(taskFormData.dueDate)
       const projectEndDate = new Date(board.projectEndDate)
       
-      console.log('Task Due Date:', taskDueDate)
-      console.log('Project End Date:', projectEndDate)
-      
       if (taskDueDate > projectEndDate) {
-        console.log('Due date validation failed')
         showErrorNotification(
           "Invalid Due Date",
           "Task due date cannot exceed project end date!"
@@ -156,8 +165,12 @@ export default function KanbanBoardPage() {
       })
       
       if (!response.ok) {
-        console.error("Failed to create task:", await response.text())
-        throw new Error("Failed to create task")
+        const errorData = await response.json()
+        showErrorNotification(
+          "Error creating task",
+          errorData.error || "Failed to create task"
+        )
+        return
       }
       
       const newTask = await response.json()
@@ -182,10 +195,16 @@ export default function KanbanBoardPage() {
       })
       setIsAddTaskDialogOpen(false)
       
-      toast.success("New task has been added to the board")
+      showSuccessNotification(
+        "Task created",
+        "New task has been added to the board"
+      )
     } catch (error) {
       console.error("Error creating task:", error)
-      toast.error("Failed to create task. Please try again.")
+      showErrorNotification(
+        "Error creating task",
+        "Failed to create task. Please try again."
+      )
     }
   }
   
@@ -243,6 +262,16 @@ export default function KanbanBoardPage() {
     
     // Only proceed if moving to a different column
     if (draggedTask.columnId === targetColumnId) return
+
+    // Check if target column already has 3 tasks
+    const targetColumn = columns.find(col => col.id === targetColumnId)
+    if (targetColumn && targetColumn.tasks.length >= 3) {
+      showErrorNotification(
+        "Cannot move task",
+        "Target column already has the maximum of 3 tasks"
+      )
+      return
+    }
     
     try {
       // Optimistically update UI
@@ -285,7 +314,10 @@ export default function KanbanBoardPage() {
       }
     } catch (error) {
       console.error("Error moving task:", error)
-      toast.error("Failed to update task position. Please try again.")
+      showErrorNotification(
+        "Error moving task",
+        "Failed to update task position. Please try again."
+      )
     } finally {
       setDraggedTask(null)
     }
@@ -379,23 +411,34 @@ export default function KanbanBoardPage() {
   return (
     <AnimatedSection>
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-2">
-          <Link href="/freelancer-dashboard/projects">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Projects
-            </Button>
-          </Link>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <Link href="/freelancer-dashboard/projects">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Projects
+                </Button>
+              </Link>
+            </div>
+            <h1 className="text-3xl font-bold">{board?.title || "Kanban Board"}</h1>
+            <p className="text-muted-foreground">{board?.description}</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsAddColumnDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Column
+          </Button>
         </div>
-        <h1 className="text-3xl font-bold">{board?.title || "Kanban Board"}</h1>
-        <p className="text-muted-foreground">{board?.description}</p>
       </div>
       
-      <div className="flex gap-6 overflow-x-auto pb-8">
+      <div className="grid grid-cols-3 gap-6 pb-8">
         {columns.map(column => (
           <div 
             key={column.id} 
-            className="flex-shrink-0 w-80"
+            className="flex-shrink-0"
             onDragOver={(e) => handleDragOver(e, column.id)}
             onDrop={(e) => handleDrop(e, column.id)}
           >
@@ -409,7 +452,7 @@ export default function KanbanBoardPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-2">
-                {column.tasks.map(task => (
+                {column.tasks.slice(0, 3).map(task => (
                   <div 
                     key={task.id}
                     draggable
@@ -444,6 +487,12 @@ export default function KanbanBoardPage() {
                   </div>
                 ))}
                 
+                {column.tasks.length > 3 && (
+                  <div className="text-center text-sm text-muted-foreground mt-2">
+                    +{column.tasks.length - 3} more tasks
+                  </div>
+                )}
+                
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -460,17 +509,6 @@ export default function KanbanBoardPage() {
             </Card>
           </div>
         ))}
-        
-        <div className="flex-shrink-0 w-80">
-          <Button 
-            variant="outline" 
-            className="h-12 w-full border-dashed"
-            onClick={() => setIsAddColumnDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Column
-          </Button>
-        </div>
       </div>
       
       {/* Add Task Dialog */}
@@ -478,6 +516,12 @@ export default function KanbanBoardPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
+            {board?.projectEndDate && (
+              <DialogDescription className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>Project Deadline: {new Date(board.projectEndDate).toLocaleDateString()}</span>
+              </DialogDescription>
+            )}
           </DialogHeader>
           <form onSubmit={handleAddTask}>
             <div className="grid gap-4 py-4">
@@ -525,6 +569,7 @@ export default function KanbanBoardPage() {
                   type="date"
                   value={taskFormData.dueDate}
                   onChange={(e) => setTaskFormData({...taskFormData, dueDate: e.target.value})}
+                  max={board?.projectEndDate}
                 />
               </div>
             </div>

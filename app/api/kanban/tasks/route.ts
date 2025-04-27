@@ -34,6 +34,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
+    // Get the assignment for this board
+    const assignment = await prisma.assignment.findFirst({
+      where: { kanbanBoardId: column.board.id }
+    });
+
+    // Validate due date against assignment due date
+    if (dueDate && assignment?.dueDate) {
+      const taskDueDate = new Date(dueDate);
+      const assignmentDueDate = new Date(assignment.dueDate);
+      
+      if (taskDueDate > assignmentDueDate) {
+        return NextResponse.json(
+          { error: "Task due date cannot exceed assignment due date" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create the task
     const task = await prisma.kanbanTask.create({
       data: {

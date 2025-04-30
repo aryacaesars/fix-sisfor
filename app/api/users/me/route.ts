@@ -17,7 +17,6 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
-        image: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -44,19 +43,17 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { name, image } = body
+    const { name } = body
 
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: {
         name: name !== undefined ? name : undefined,
-        image: image !== undefined ? image : undefined,
       },
       select: {
         id: true,
         name: true,
         email: true,
-        image: true,
         role: true,
         createdAt: true,
         updatedAt: true,

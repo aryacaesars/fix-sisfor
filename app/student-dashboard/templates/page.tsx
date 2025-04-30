@@ -15,9 +15,13 @@ import {
   ExternalLink,
   Search,
   Filter,
+  X,
+  Trash2,
+  Settings
 } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
 import { createPortal } from "react-dom"
+import { showSuccessNotification, showErrorNotification } from "@/components/ui/notification"
 
 type Template = {
   id: string
@@ -29,7 +33,7 @@ type Template = {
 }
 
 // Move Modal to a separate component
-const TemplateFormModal = ({ isOpen, onClose, onSubmit }) => {
+const TemplateFormModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: (data: any) => void }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -38,7 +42,7 @@ const TemplateFormModal = ({ isOpen, onClose, onSubmit }) => {
     link: "",
   })
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
@@ -57,51 +61,81 @@ const TemplateFormModal = ({ isOpen, onClose, onSubmit }) => {
   if (!isOpen) return null
   
   return createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Create Template</h2>
-        <div className="space-y-4">
-          <Input
-            name="title"
-            placeholder="Title"
-            value={formData.title}
-            onChange={handleInputChange}
-          />
-          <Input
-            name="description"
-            placeholder="Description"
-            value={formData.description}
-            onChange={handleInputChange}
-          />
-          <Input
-            name="type"
-            placeholder="Type (e.g., document, form)"
-            value={formData.type}
-            onChange={handleInputChange}
-          />
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleInputChange}
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-          >
-            <option value="">Select Category</option>
-            <option value="assignment">Assignment</option>
-            <option value="notes">Notes</option>
-            <option value="project">Project</option>
-          </select>
-          <Input
-            name="link"
-            placeholder="Google Docs Link"
-            value={formData.link}
-            onChange={handleInputChange}
-          />
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+      <div className="bg-background p-8 rounded-lg shadow-lg w-full max-w-4xl border border-border">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-foreground">Create Template</h2>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </Button>
         </div>
-        <div className="flex justify-end mt-4 space-x-2">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Title</label>
+              <Input
+                name="title"
+                placeholder="Enter template title"
+                value={formData.title}
+                onChange={handleInputChange}
+                className="bg-background"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Description</label>
+              <Input
+                name="description"
+                placeholder="Enter template description"
+                value={formData.description}
+                onChange={handleInputChange}
+                className="bg-background"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Type</label>
+              <Input
+                name="type"
+                placeholder="Enter template type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="bg-background"
+              />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Category</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded-md bg-background text-foreground"
+              >
+                <option value="">Select Category</option>
+                <option value="assignment">Assignment</option>
+                <option value="notes">Notes</option>
+                <option value="project">Project</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Google Docs Link</label>
+              <Input
+                name="link"
+                placeholder="Enter Google Docs link"
+                value={formData.link}
+                onChange={handleInputChange}
+                className="bg-background"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end mt-6 space-x-3">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>Submit</Button>
+          <Button onClick={handleSubmit}>
+            Create Template
+          </Button>
         </div>
       </div>
     </div>,
@@ -117,6 +151,7 @@ export default function StudentFormTemplatesPage() {
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [isManageMode, setIsManageMode] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
@@ -173,7 +208,13 @@ export default function StudentFormTemplatesPage() {
     return null
   }
 
-  const handleModalSubmit = async (formData) => {
+  const handleModalSubmit = async (formData: {
+    title: string
+    description: string
+    type: string
+    category: string
+    link: string
+  }) => {
     try {
       const response = await fetch("/api/templates", {
         method: "POST",
@@ -190,8 +231,28 @@ export default function StudentFormTemplatesPage() {
       const newTemplate = await response.json()
       setTemplates((prev) => [newTemplate, ...prev])
       setIsModalOpen(false)
+      showSuccessNotification("Template created successfully")
     } catch (error) {
       console.error("Error creating template:", error)
+      showErrorNotification("Failed to create template", error instanceof Error ? error.message : "An error occurred")
+    }
+  }
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    try {
+      const response = await fetch(`/api/templates/${templateId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete template")
+      }
+
+      setTemplates((prev) => prev.filter((t) => t.id !== templateId))
+      showSuccessNotification("Template deleted successfully")
+    } catch (error) {
+      console.error("Error deleting template:", error)
+      showErrorNotification("Failed to delete template", error instanceof Error ? error.message : "An error occurred")
     }
   }
 
@@ -208,15 +269,15 @@ export default function StudentFormTemplatesPage() {
 
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =
-      template.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      template.type.toLowerCase().includes(searchTerm.toLowerCase())
+      (template?.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (template?.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (template?.type?.toLowerCase() || '').includes(searchTerm.toLowerCase())
 
     const matchesCategory =
       activeTab === "all" ||
-      (activeTab === "assignment" && template.category === "assignment") ||
-      (activeTab === "notes" && template.category === "notes") ||
-      (activeTab === "project" && template.category === "project")
+      (activeTab === "assignment" && template?.category === "assignment") ||
+      (activeTab === "notes" && template?.category === "notes") ||
+      (activeTab === "project" && template?.category === "project")
 
     return matchesSearch && matchesCategory
   })
@@ -238,13 +299,23 @@ export default function StudentFormTemplatesPage() {
     <AnimatedSection>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Form Templates</h1>
-        <Button
-          className="transition-all duration-200 hover:scale-105"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant={isManageMode ? "default" : "outline"}
+            className="transition-all duration-200 hover:scale-105"
+            onClick={() => setIsManageMode(!isManageMode)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            {isManageMode ? "Done Managing" : "Manage Templates"}
+          </Button>
+          <Button
+            className="transition-all duration-200 hover:scale-105"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -257,10 +328,6 @@ export default function StudentFormTemplatesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="flex gap-2">
-          <Filter className="h-4 w-4" />
-          Filter
-        </Button>
       </div>
 
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
@@ -276,16 +343,30 @@ export default function StudentFormTemplatesPage() {
         {filteredTemplates.map((template) => (
           <Card 
             key={template.id} 
-            className="transition-all duration-300 hover:shadow-md cursor-pointer hover:scale-[1.01]"
+            className="transition-all duration-300 hover:shadow-md cursor-pointer hover:scale-[1.01] relative"
             onClick={(e) => {
-              e.preventDefault();
-              // Ensure the link has a protocol prefix
-              if (template.link) {
-                const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
-                window.open(url, '_blank', 'noopener,noreferrer');
+              if (!isManageMode) {
+                e.preventDefault();
+                if (template.link) {
+                  const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                }
               }
             }}
           >
+            {isManageMode && (
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteTemplate(template.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <CardHeader>
               <div className="flex items-center gap-2">
                 <div className="rounded-full bg-primary/10 p-2">{getCategoryIcon(template.category)}</div>

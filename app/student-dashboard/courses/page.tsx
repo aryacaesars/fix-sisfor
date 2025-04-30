@@ -423,156 +423,160 @@ export default function CoursesPage() {
           setSelectedCourse(null)
         }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{isEditMode ? "Edit Course" : "Add New Course"}</DialogTitle>
             <DialogDescription>
               {isEditMode ? "Update course information" : "Add a new course to your schedule"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Course Name <span className="text-red-500">*</span></Label>
-              <Input
-                id="name"
-                placeholder="Enter course name"
-                value={isEditMode ? selectedCourse?.name : newCourse.name}
-                onChange={(e) => {
-                  if (isEditMode && selectedCourse) {
-                    setSelectedCourse({ ...selectedCourse, name: e.target.value })
-                  } else {
-                    setNewCourse({ ...newCourse, name: e.target.value })
-                  }
-                }}
-              />
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Course Name <span className="text-red-500">*</span></Label>
+                <Input
+                  id="name"
+                  placeholder="Enter course name"
+                  value={isEditMode ? selectedCourse?.name : newCourse.name}
+                  onChange={(e) => {
+                    if (isEditMode && selectedCourse) {
+                      setSelectedCourse({ ...selectedCourse, name: e.target.value })
+                    } else {
+                      setNewCourse({ ...newCourse, name: e.target.value })
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="code">Course Code <span className="text-red-500">*</span></Label>
+                <Input
+                  id="code"
+                  placeholder="Enter course code"
+                  value={isEditMode ? selectedCourse?.code : newCourse.code}
+                  onChange={(e) => {
+                    if (isEditMode && selectedCourse) {
+                      setSelectedCourse({ ...selectedCourse, code: e.target.value })
+                    } else {
+                      setNewCourse({ ...newCourse, code: e.target.value })
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lecturer">Lecturer <span className="text-red-500">*</span></Label>
+                <Input
+                  id="lecturer"
+                  placeholder="Enter lecturer name"
+                  value={isEditMode ? selectedCourse?.lecturer : newCourse.lecturer}
+                  onChange={(e) => {
+                    if (isEditMode && selectedCourse) {
+                      setSelectedCourse({ ...selectedCourse, lecturer: e.target.value })
+                    } else {
+                      setNewCourse({ ...newCourse, lecturer: e.target.value })
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="room">Room</Label>
+                <Input
+                  id="room"
+                  placeholder="Enter room number"
+                  value={isEditMode ? selectedCourse?.room : newCourse.room}
+                  onChange={(e) => {
+                    if (isEditMode && selectedCourse) {
+                      setSelectedCourse({ ...selectedCourse, room: e.target.value })
+                    } else {
+                      setNewCourse({ ...newCourse, room: e.target.value })
+                    }
+                  }}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="code">Course Code <span className="text-red-500">*</span></Label>
-              <Input
-                id="code"
-                placeholder="Enter course code"
-                value={isEditMode ? selectedCourse?.code : newCourse.code}
-                onChange={(e) => {
-                  if (isEditMode && selectedCourse) {
-                    setSelectedCourse({ ...selectedCourse, code: e.target.value })
-                  } else {
-                    setNewCourse({ ...newCourse, code: e.target.value })
-                  }
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lecturer">Lecturer <span className="text-red-500">*</span></Label>
-              <Input
-                id="lecturer"
-                placeholder="Enter lecturer name"
-                value={isEditMode ? selectedCourse?.lecturer : newCourse.lecturer}
-                onChange={(e) => {
-                  if (isEditMode && selectedCourse) {
-                    setSelectedCourse({ ...selectedCourse, lecturer: e.target.value })
-                  } else {
-                    setNewCourse({ ...newCourse, lecturer: e.target.value })
-                  }
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="room">Room</Label>
-              <Input
-                id="room"
-                placeholder="Enter room number"
-                value={isEditMode ? selectedCourse?.room : newCourse.room}
-                onChange={(e) => {
-                  if (isEditMode && selectedCourse) {
-                    setSelectedCourse({ ...selectedCourse, room: e.target.value })
-                  } else {
-                    setNewCourse({ ...newCourse, room: e.target.value })
-                  }
-                }}
-              />
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label>Schedule</Label>
-              {(isEditMode ? selectedCourse?.schedule || [] : newCourse.schedule).map((sched, index) => (
-                <div key={index} className="grid grid-cols-3 gap-2">
-                  <Select
-                    value={sched.day}
-                    onValueChange={(value) => {
-                      if (isEditMode && selectedCourse) {
-                        const newSchedule = [...(selectedCourse.schedule || [])]
-                        newSchedule[index].day = value
-                        setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
-                      } else {
-                        const newSchedule = [...newCourse.schedule]
-                        newSchedule[index].day = value
-                        setNewCourse({ ...newCourse, schedule: newSchedule })
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monday">Monday</SelectItem>
-                      <SelectItem value="tuesday">Tuesday</SelectItem>
-                      <SelectItem value="wednesday">Wednesday</SelectItem>
-                      <SelectItem value="thursday">Thursday</SelectItem>
-                      <SelectItem value="friday">Friday</SelectItem>
-                      <SelectItem value="saturday">Saturday</SelectItem>
-                      <SelectItem value="sunday">Sunday</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="time"
-                    value={sched.startTime}
-                    onChange={(e) => {
-                      if (isEditMode && selectedCourse) {
-                        const newSchedule = [...(selectedCourse.schedule || [])]
-                        newSchedule[index].startTime = e.target.value
-                        setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
-                      } else {
-                        const newSchedule = [...newCourse.schedule]
-                        newSchedule[index].startTime = e.target.value
-                        setNewCourse({ ...newCourse, schedule: newSchedule })
-                      }
-                    }}
-                  />
-                  <Input
-                    type="time"
-                    value={sched.endTime}
-                    onChange={(e) => {
-                      if (isEditMode && selectedCourse) {
-                        const newSchedule = [...(selectedCourse.schedule || [])]
-                        newSchedule[index].endTime = e.target.value
-                        setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
-                      } else {
-                        const newSchedule = [...newCourse.schedule]
-                        newSchedule[index].endTime = e.target.value
-                        setNewCourse({ ...newCourse, schedule: newSchedule })
-                      }
-                    }}
-                  />
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (isEditMode && selectedCourse) {
-                    setSelectedCourse({
-                      ...selectedCourse,
-                      schedule: [...(selectedCourse.schedule || []), { day: "", startTime: "", endTime: "" }]
-                    })
-                  } else {
-                    setNewCourse({
-                      ...newCourse,
-                      schedule: [...newCourse.schedule, { day: "", startTime: "", endTime: "" }]
-                    })
-                  }
-                }}
-              >
-                Add Schedule
-              </Button>
+              <div className="space-y-4">
+                {(isEditMode ? selectedCourse?.schedule || [] : newCourse.schedule).map((sched, index) => (
+                  <div key={index} className="grid grid-cols-3 gap-2">
+                    <Select
+                      value={sched.day}
+                      onValueChange={(value) => {
+                        if (isEditMode && selectedCourse) {
+                          const newSchedule = [...(selectedCourse.schedule || [])]
+                          newSchedule[index].day = value
+                          setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
+                        } else {
+                          const newSchedule = [...newCourse.schedule]
+                          newSchedule[index].day = value
+                          setNewCourse({ ...newCourse, schedule: newSchedule })
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monday">Monday</SelectItem>
+                        <SelectItem value="tuesday">Tuesday</SelectItem>
+                        <SelectItem value="wednesday">Wednesday</SelectItem>
+                        <SelectItem value="thursday">Thursday</SelectItem>
+                        <SelectItem value="friday">Friday</SelectItem>
+                        <SelectItem value="saturday">Saturday</SelectItem>
+                        <SelectItem value="sunday">Sunday</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="time"
+                      value={sched.startTime}
+                      onChange={(e) => {
+                        if (isEditMode && selectedCourse) {
+                          const newSchedule = [...(selectedCourse.schedule || [])]
+                          newSchedule[index].startTime = e.target.value
+                          setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
+                        } else {
+                          const newSchedule = [...newCourse.schedule]
+                          newSchedule[index].startTime = e.target.value
+                          setNewCourse({ ...newCourse, schedule: newSchedule })
+                        }
+                      }}
+                    />
+                    <Input
+                      type="time"
+                      value={sched.endTime}
+                      onChange={(e) => {
+                        if (isEditMode && selectedCourse) {
+                          const newSchedule = [...(selectedCourse.schedule || [])]
+                          newSchedule[index].endTime = e.target.value
+                          setSelectedCourse({ ...selectedCourse, schedule: newSchedule })
+                        } else {
+                          const newSchedule = [...newCourse.schedule]
+                          newSchedule[index].endTime = e.target.value
+                          setNewCourse({ ...newCourse, schedule: newSchedule })
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (isEditMode && selectedCourse) {
+                      setSelectedCourse({
+                        ...selectedCourse,
+                        schedule: [...(selectedCourse.schedule || []), { day: "", startTime: "", endTime: "" }]
+                      })
+                    } else {
+                      setNewCourse({
+                        ...newCourse,
+                        schedule: [...newCourse.schedule, { day: "", startTime: "", endTime: "" }]
+                      })
+                    }
+                  }}
+                >
+                  Add Schedule
+                </Button>
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">

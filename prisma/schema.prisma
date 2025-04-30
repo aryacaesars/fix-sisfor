@@ -17,9 +17,7 @@ model User {
   updatedAt      DateTime       @updatedAt
   emailVerified  DateTime?      
   assignments    Assignment[]
-  Attachment     Attachment[]
   boardMembers   BoardMember[]
-  comments       Comment[]
   boards         KanbanBoard[]
   tasks          KanbanTask[]
   projects       Project[]
@@ -91,38 +89,9 @@ model KanbanTask {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   labels       String[]
-  attachments  Attachment[]
-  comments     Comment[]
   column       KanbanColumn   @relation(fields: [columnId], references: [id], onDelete: Cascade)
   createdBy    User           @relation(fields: [createdById], references: [id])
   TaskAssignee TaskAssignee[]
-}
-
-model Comment {
-  id        String     @id @default(cuid())
-  content   String
-  taskId    String
-  userId    String
-  parentId  String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  parent    Comment?   @relation("CommentToComment", fields: [parentId], references: [id])
-  replies   Comment[]  @relation("CommentToComment")
-  task      KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Attachment {
-  id         String     @id @default(cuid())
-  name       String
-  url        String
-  type       String
-  size       Int
-  taskId     String
-  uploadedAt DateTime   @default(now())
-  userId     String
-  task       KanbanTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Project {

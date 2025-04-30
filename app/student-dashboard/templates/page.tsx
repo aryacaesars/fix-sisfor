@@ -17,11 +17,19 @@ import {
   Filter,
   X,
   Trash2,
-  Settings
+  Settings,
+  Pencil
 } from "lucide-react"
 import { useRBAC } from "@/hooks/use-rbac"
 import { createPortal } from "react-dom"
 import { showSuccessNotification, showErrorNotification } from "@/components/ui/notification"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 type Template = {
   id: string
@@ -37,7 +45,6 @@ const TemplateFormModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onC
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    type: "",
     category: "",
     link: "",
   })
@@ -52,7 +59,6 @@ const TemplateFormModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onC
     setFormData({
       title: "",
       description: "",
-      type: "",
       category: "",
       link: "",
     })
@@ -87,16 +93,6 @@ const TemplateFormModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onC
                 name="description"
                 placeholder="Enter template description"
                 value={formData.description}
-                onChange={handleInputChange}
-                className="bg-background"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Type</label>
-              <Input
-                name="type"
-                placeholder="Enter template type"
-                value={formData.type}
                 onChange={handleInputChange}
                 className="bg-background"
               />
@@ -150,8 +146,22 @@ export default function StudentFormTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [isManageMode, setIsManageMode] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    category: "",
+    link: "",
+  })
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
 
   useEffect(() => {
     setIsMounted(true)
@@ -211,10 +221,10 @@ export default function StudentFormTemplatesPage() {
   const handleModalSubmit = async (formData: {
     title: string
     description: string
-    type: string
     category: string
     link: string
   }) => {
+    setIsModalOpen(false)
     try {
       const response = await fetch("/api/templates", {
         method: "POST",
@@ -230,7 +240,6 @@ export default function StudentFormTemplatesPage() {
 
       const newTemplate = await response.json()
       setTemplates((prev) => [newTemplate, ...prev])
-      setIsModalOpen(false)
       showSuccessNotification("Template created successfully")
     } catch (error) {
       console.error("Error creating template:", error)
@@ -239,6 +248,7 @@ export default function StudentFormTemplatesPage() {
   }
 
   const handleDeleteTemplate = async (templateId: string) => {
+    setIsDeleteModalOpen(false)
     try {
       const response = await fetch(`/api/templates/${templateId}`, {
         method: "DELETE",
@@ -253,6 +263,38 @@ export default function StudentFormTemplatesPage() {
     } catch (error) {
       console.error("Error deleting template:", error)
       showErrorNotification("Failed to delete template", error instanceof Error ? error.message : "An error occurred")
+    }
+  }
+
+  const handleUpdate = async () => {
+    if (!selectedTemplate) return
+    setIsEditModalOpen(false)
+
+    try {
+      const response = await fetch(`/api/templates/${selectedTemplate.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update template")
+      }
+
+      const updatedTemplate = await response.json()
+      setTemplates((prev) =>
+        prev.map((template) =>
+          template.id === updatedTemplate.id ? updatedTemplate : template
+        )
+      )
+      setSelectedTemplate(null)
+      setFormData({ title: "", description: "", category: "", link: "" })
+      showSuccessNotification("Template updated successfully")
+    } catch (error) {
+      console.error("Error updating template:", error)
+      showErrorNotification("Failed to update template", error instanceof Error ? error.message : "An error occurred")
     }
   }
 
@@ -293,6 +335,22 @@ export default function StudentFormTemplatesPage() {
       default:
         return <FileText className="h-4 w-4 text-primary" />
     }
+  }
+
+  const handleEdit = (template: Template) => {
+    setSelectedTemplate(template)
+    setFormData({
+      title: template.title,
+      description: template.description,
+      category: template.category,
+      link: template.link,
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const handleDeleteClick = (template: Template) => {
+    setSelectedTemplate(template)
+    setIsDeleteModalOpen(true)
   }
 
   return (
@@ -341,62 +399,49 @@ export default function StudentFormTemplatesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTemplates.map((template) => (
-          <Card 
-            key={template.id} 
-            className="transition-all duration-300 hover:shadow-md cursor-pointer hover:scale-[1.01] relative"
-            onClick={(e) => {
-              if (!isManageMode) {
-                e.preventDefault();
-                if (template.link) {
-                  const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
-                  window.open(url, '_blank', 'noopener,noreferrer');
-                }
-              }
-            }}
-          >
-            {isManageMode && (
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2 z-10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteTemplate(template.id);
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
+          <Card key={template.id} className="transition-all duration-300 hover:shadow-md">
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <div className="rounded-full bg-primary/10 p-2">{getCategoryIcon(template.category)}</div>
-                <CardTitle className="text-lg">{template.title}</CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-primary/10 p-2">{getCategoryIcon(template.category)}</div>
+                  <CardTitle className="text-lg">{template.title}</CardTitle>
+                </div>
+                <div className="flex gap-1">
+                  {isManageMode ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(template)}
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(template)}
+                      className="h-8 w-8"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="mb-2">
-                <span className="inline-block px-2 py-1 text-xs rounded-full bg-muted">{template.type}</span>
+                <span className="inline-block px-2 py-1 text-xs rounded-full bg-muted">{template.category}</span>
               </div>
               <p className="text-sm text-muted-foreground">{template.description}</p>
             </CardContent>
             <CardFooter className="flex flex-col items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-1 w-full">
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
               <Button variant="default" size="sm" className="gap-1 w-full">
                 <a
                   href={template.link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-sm text-secondary w-full justify-center"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (template.link) {
-                      const url = template.link.startsWith('http') ? template.link : `https://${template.link}`;
-                      window.open(url, '_blank', 'noopener,noreferrer');
-                    }
-                  }}
                 >
                   <ExternalLink className="h-4 w-4" />
                   Open Template
@@ -419,6 +464,109 @@ export default function StudentFormTemplatesPage() {
               : "No templates available in this category."}
           </p>
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {isEditModalOpen && (
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="sm:max-w-[800px]">
+            <DialogHeader>
+              <DialogTitle>Edit Template</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-6 py-4">
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <label htmlFor="title" className="text-sm font-medium">
+                    Title
+                  </label>
+                  <Input
+                    id="title"
+                    name="title"
+                    placeholder="Enter template title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="description" className="text-sm font-medium">
+                    Description
+                  </label>
+                  <Input
+                    id="description"
+                    name="description"
+                    placeholder="Enter template description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <label htmlFor="category" className="text-sm font-medium">
+                    Category
+                  </label>
+                  <select
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md bg-background text-foreground"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="assignment">Assignment</option>
+                    <option value="notes">Notes</option>
+                    <option value="project">Project</option>
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <label htmlFor="link" className="text-sm font-medium">
+                    Google Docs Link
+                  </label>
+                  <Input
+                    id="link"
+                    name="link"
+                    placeholder="Enter Google Docs link"
+                    value={formData.link}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdate}>Update Template</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Delete Template</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete the template "{selectedTemplate?.title}"? This action cannot be undone.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => selectedTemplate && handleDeleteTemplate(selectedTemplate.id)}
+              >
+                Delete Template
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {isMounted && (

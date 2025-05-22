@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call assignment email endpoint
-        env:
-          ASSIGNMENT_CRON_URL: ${{ secrets.ASSIGNMENT_CRON_URL }}
         run: |
-          curl -X GET "$ASSIGNMENT_CRON_URL" \
+          curl -X GET "${{ secrets.ASSIGNMENT_CRON_URL }}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

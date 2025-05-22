@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { Prisma } from '@prisma/client';
-import { differenceInHours, differenceInDays } from 'date-fns';
 
 type UserWithAssignments = Prisma.UserGetPayload<{
   include: {
@@ -12,6 +11,14 @@ type UserWithAssignments = Prisma.UserGetPayload<{
 }>;
 
 export const runtime = 'nodejs';
+
+function getReminderLabel(diffHours: number): string {
+  if (diffHours <= 24.5 && diffHours > 23.5) return 'H-1 Hari';
+  if (diffHours <= 12.5 && diffHours > 11.5) return 'H-12 Jam';
+  if (diffHours <= 6.5 && diffHours > 5.5) return 'H-6 Jam';
+  if (diffHours <= 1.5 && diffHours > 0.5) return 'H-1 Jam';
+  return '';
+}
 
 export async function GET(req: Request) {
   try {
@@ -29,7 +36,7 @@ export async function GET(req: Request) {
     // Get all users with email notifications enabled
     const users = await prisma.user.findMany({
       where: {
-        role: 'student', // Only send to students
+        role: 'student',
         settings: {
           emailNotifications: true,
         },
@@ -39,48 +46,29 @@ export async function GET(req: Request) {
         assignments: {
           where: {
             status: {
-              not: 'completed', // Only include non-completed assignments
+              not: 'completed',
             },
             dueDate: {
-              gte: new Date(), // Assignments that haven't passed due date
+              gte: new Date(),
             },
           },
         },
       },
     }) as UserWithAssignments[];
 
-    // Process notifications for each user
     for (const user of users) {
       if (!user.email) continue;
 
-      // Get assignments with H-1 day, H-12 jam, H-6 jam, H-1 jam (window diperlebar biar tidak miss)
       const now = new Date();
       const assignmentsForReminder = user.assignments.filter((assignment) => {
         if (!assignment.dueDate) return false;
         const dueDate = new Date(assignment.dueDate);
-        const diffMs = dueDate.getTime() - now.getTime();
-        const diffHours = diffMs / (1000 * 60 * 60);
-        const diffDays = diffMs / (1000 * 60 * 60 * 24);
-        // H-1 hari: antara 23.5 - 24.5 jam
-        if (diffHours <= 24.5 && diffHours > 23.5) return true;
-        // H-12 jam: antara 11.5 - 12.5 jam
-        if (diffHours <= 12.5 && diffHours > 11.5) return true;
-        // H-6 jam: antara 5.5 - 6.5 jam
-        if (diffHours <= 6.5 && diffHours > 5.5) return true;
-        // H-1 jam: antara 0.5 - 1.5 jam
-        if (diffHours <= 1.5 && diffHours > 0.5) return true;
-        return false;
+        const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+        return !!getReminderLabel(diffHours);
       });
-
-      // Tambahkan log assignment yang masuk window
-      console.log(`[CRON_ASSIGNMENT_EMAIL] User: ${user.email}, Assignments for reminder:`, assignmentsForReminder.map(a => ({
-        title: a.title,
-        dueDate: a.dueDate,
-      })));
 
       if (assignmentsForReminder.length > 0) {
         try {
-          console.log(`[CRON_ASSIGNMENT_EMAIL] Sending email to: ${user.email}`);
           await sendEmail({
             to: user.email,
             subject: 'Reminder Assignment Mendekati Deadline',
@@ -93,18 +81,13 @@ export async function GET(req: Request) {
                   ${assignmentsForReminder.map((assignment) => {
                     if (!assignment.dueDate) return '';
                     const dueDate = new Date(assignment.dueDate);
-                    const diffMs = dueDate.getTime() - now.getTime();
-                    const diffHours = diffMs / (1000 * 60 * 60);
-                    let label = '';
-                    if (diffHours <= 24.5 && diffHours > 23.5) label = 'H-1 Hari';
-                    else if (diffHours <= 12.5 && diffHours > 11.5) label = 'H-12 Jam';
-                    else if (diffHours <= 6.5 && diffHours > 5.5) label = 'H-6 Jam';
-                    else if (diffHours <= 1.5 && diffHours > 0.5) label = 'H-1 Jam';
+                    const diffHours = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+                    const label = getReminderLabel(diffHours);
                     return `
                       <li style="margin-bottom: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
                         <strong>${assignment.title}</strong><br>
                         Mata Kuliah: ${assignment.course || 'Tidak ada'}<br>
-                        Deadline: ${dueDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}<br>
+                        Deadline: ${dueDate.toLocaleString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}<br>
                         Status: ${assignment.status}<br>
                         <span style="color: #d97706; font-weight: bold;">${label}</span>
                       </li>

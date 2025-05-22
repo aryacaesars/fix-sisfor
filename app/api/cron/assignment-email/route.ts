@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { Prisma } from '@prisma/client';
+import { differenceInHours, differenceInDays } from 'date-fns';
 
 type UserWithAssignments = Prisma.UserGetPayload<{
   include: {
@@ -52,38 +53,51 @@ export async function GET(req: Request) {
     for (const user of users) {
       if (!user.email) continue;
 
-      // Get assignments with upcoming deadlines (within 7 days)
-      const today = new Date();
-      const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-      const assignmentsWithUpcomingDeadlines = user.assignments.filter((assignment) => {
+      // Get assignments with H-1 day, H-6 jam, H-1 jam
+      const now = new Date();
+      const assignmentsForReminder = user.assignments.filter((assignment) => {
         if (!assignment.dueDate) return false;
         const dueDate = new Date(assignment.dueDate);
-        return dueDate <= sevenDaysFromNow && dueDate >= today;
+        const diffHours = differenceInHours(dueDate, now);
+        const diffDays = differenceInDays(dueDate, now);
+        // H-1 hari
+        if (diffDays === 1) return true;
+        // H-12 jam
+        if (diffHours <= 12 && diffHours > 11) return true;
+        // H-6 jam
+        if (diffHours <= 6 && diffHours > 5) return true;
+        // H-1 jam
+        if (diffHours <= 1 && diffHours > 0) return true;
+        return false;
       });
 
-      if (assignmentsWithUpcomingDeadlines.length > 0) {
-        // Send email notification
+      if (assignmentsForReminder.length > 0) {
         await sendEmail({
           to: user.email,
-          subject: 'Deadline Assignment Mendekat',
+          subject: 'Reminder Assignment Mendekati Deadline',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <h2 style="color: #333; text-align: center;">Deadline Assignment Mendekat</h2>
+              <h2 style="color: #333; text-align: center;">Reminder Assignment Mendekati Deadline</h2>
               <p>Halo ${user.name || 'Mahasiswa'},</p>
-              <p>Anda memiliki ${assignmentsWithUpcomingDeadlines.length} assignment yang mendekati deadline dalam 7 hari ke depan:</p>
+              <p>Berikut assignment yang segera deadline (H-1 hari, H-6 jam, atau H-1 jam):</p>
               <ul style="list-style: none; padding: 0;">
-                ${assignmentsWithUpcomingDeadlines.map((assignment) => {
+                ${assignmentsForReminder.map((assignment) => {
                   if (!assignment.dueDate) return '';
                   const dueDate = new Date(assignment.dueDate);
-                  const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                  const diffHours = differenceInHours(dueDate, now);
+                  const diffDays = differenceInDays(dueDate, now);
+                  let label = '';
+                  if (diffDays === 1) label = 'H-1 Hari';
+                  else if (diffHours <= 12 && diffHours > 11) label = 'H-12 Jam';
+                  else if (diffHours <= 6 && diffHours > 5) label = 'H-6 Jam';
+                  else if (diffHours <= 1 && diffHours > 0) label = 'H-1 Jam';
                   return `
                     <li style="margin-bottom: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
                       <strong>${assignment.title}</strong><br>
                       Mata Kuliah: ${assignment.course || 'Tidak ada'}<br>
-                      Deadline: ${dueDate.toLocaleDateString('id-ID')}<br>
+                      Deadline: ${dueDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}<br>
                       Status: ${assignment.status}<br>
-                      Sisa waktu: ${daysLeft} hari
+                      <span style="color: #d97706; font-weight: bold;">${label}</span>
                     </li>
                   `;
                 }).join('')}

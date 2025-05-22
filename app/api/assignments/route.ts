@@ -77,6 +77,15 @@ export async function POST(request: Request) {
     console.log("Creating assignment with values:", { title, description, course, status, dueDate })
     console.log("Will create Kanban board:", createKanbanBoard)
 
+    // Convert dueDate from local (datetime-local) to UTC so it matches user input
+    let dueDateUTC: Date | null = null;
+    if (dueDate) {
+      // dueDate is string like "2025-05-22T15:00"
+      // treat as local time, convert to UTC
+      const localDate = new Date(dueDate);
+      dueDateUTC = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+    }
+
     // Create a new assignment
     const assignment = await prisma.assignment.create({
       data: {
@@ -84,7 +93,7 @@ export async function POST(request: Request) {
         description: description || null,
         course: course || null,
         status: status || "not-started",
-        dueDate: dueDate ? new Date(dueDate) : null,
+        dueDate: dueDateUTC,
         userId: session.user.id,
       },
     })

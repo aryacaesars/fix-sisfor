@@ -2,7 +2,7 @@ name: Assignment Email Cron
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Setiap hari jam 07:00 WIB (0 0 UTC)
+    - cron: '0 * * * *' # Setiap jam pada menit ke-0 (UTC)
   workflow_dispatch:
 
 jobs:
@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call assignment email endpoint
+        env:
+          ASSIGNMENT_CRON_URL: ${{ secrets.ASSIGNMENT_CRON_URL }}
         run: |
-          curl -X GET "https://ciao-pink.vercel.app/api/cron/assignment-email" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" 
+          curl -X GET "$ASSIGNMENT_CRON_URL" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

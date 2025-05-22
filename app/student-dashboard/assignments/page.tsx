@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AnimatedSection } from "@/components/animated-section"
 import { useToast } from "@/components/ui/use-toast"
 import { useRBAC } from "@/hooks/use-rbac"
-import { format } from "date-fns"
+import { format, differenceInHours, differenceInDays } from "date-fns"
 import { Calendar, Clock, Plus, Edit, Eye, Trash, Kanban, Search, Filter } from "lucide-react"
 import { Dialog as AlertDialog, DialogContent as AlertDialogContent, DialogHeader as AlertDialogHeader, DialogTitle as AlertDialogTitle, DialogFooter as AlertDialogFooter } from "@/components/ui/dialog"
 import { 
@@ -91,6 +91,9 @@ export default function AssignmentsPage() {
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all")
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all")
 
+  // Reminder state (to avoid duplicate reminders in one session)
+  const [reminded, setReminded] = useState<{[id: string]: {h1?: boolean, h6?: boolean, h1h?: boolean}}>({})
+
   // Effect hooks
   useEffect(() => {
     const openModal = searchParams.get('openModal')
@@ -163,12 +166,12 @@ export default function AssignmentsPage() {
     }
   }, [isAuthorized, toast])
 
+
   useEffect(() => {
     const checkDeadlines = async () => {
       const now = new Date();
       const updatedAssignments = assignments.map(assignment => {
         if (assignment.status === "completed") return assignment;
-        
         const dueDate = new Date(assignment.dueDate || "");
         if (dueDate < now && assignment.status !== "overdue") {
           return { ...assignment, status: "overdue" };
@@ -189,9 +192,7 @@ export default function AssignmentsPage() {
             });
             if (!response.ok) throw new Error("Failed to delete overdue assignment");
           }
-          
           setAssignments(assignments.filter(assignment => assignment.status !== "overdue"));
-          
           toast({
             title: "Overdue Assignments Deleted",
             description: `${overdueAssignments.length} overdue assignment(s) have been automatically deleted.`,
@@ -207,8 +208,54 @@ export default function AssignmentsPage() {
       }
     };
 
-    const interval = setInterval(checkDeadlines, 60000);
+    // --- Reminder logic ---
+    const checkReminders = () => {
+      const now = new Date();
+      setReminded((prevReminded) => {
+        let updatedReminded = { ...prevReminded };
+        assignments.forEach(assignment => {
+          if (!assignment.dueDate || assignment.status === "completed" || assignment.status === "overdue") return;
+          const dueDate = new Date(assignment.dueDate);
+          const diffHours = differenceInHours(dueDate, now);
+          const diffDays = differenceInDays(dueDate, now);
+          // H-1 day
+          if (diffDays === 1 && !updatedReminded[assignment.id]?.h1) {
+            toast({
+              title: `Reminder H-1: ${assignment.title}`,
+              description: `Deadline untuk ${assignment.title} (${assignment.course || ''}) kurang dari 1 hari lagi!`,
+              variant: "default"
+            });
+            updatedReminded[assignment.id] = { ...(updatedReminded[assignment.id] || {}), h1: true };
+          }
+          // H-6 jam
+          if (diffHours <= 6 && diffHours > 1 && !updatedReminded[assignment.id]?.h6) {
+            toast({
+              title: `Reminder H-6 Jam: ${assignment.title}`,
+              description: `Deadline untuk ${assignment.title} (${assignment.course || ''}) kurang dari 6 jam lagi!`,
+              variant: "default"
+            });
+            updatedReminded[assignment.id] = { ...(updatedReminded[assignment.id] || {}), h6: true };
+          }
+          // H-1 jam
+          if (diffHours <= 1 && diffHours > 0 && !updatedReminded[assignment.id]?.h1h) {
+            toast({
+              title: `Reminder H-1 Jam: ${assignment.title}`,
+              description: `Deadline untuk ${assignment.title} (${assignment.course || ''}) kurang dari 1 jam lagi!`,
+              variant: "destructive"
+            });
+            updatedReminded[assignment.id] = { ...(updatedReminded[assignment.id] || {}), h1h: true };
+          }
+        });
+        return updatedReminded;
+      });
+    };
+
+    const interval = setInterval(() => {
+      checkDeadlines();
+      checkReminders();
+    }, 60000);
     checkDeadlines();
+    checkReminders();
 
     return () => clearInterval(interval);
   }, [assignments, toast]);
@@ -805,8 +852,8 @@ export default function AssignmentsPage() {
                 <Label htmlFor="dueDate">Due Date <span className="text-red-500">*</span></Label>
                 <Input
                   id="dueDate"
-                  type="date"
-                  value={newAssignment.dueDate}
+                  type="datetime-local"
+                  value={newAssignment.dueDate ? newAssignment.dueDate.slice(0, 16) : ""}
                   onChange={(e) => setNewAssignment({ ...newAssignment, dueDate: e.target.value })}
                 />
               </div>

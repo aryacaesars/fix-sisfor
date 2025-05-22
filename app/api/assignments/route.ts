@@ -77,13 +77,12 @@ export async function POST(request: Request) {
     console.log("Creating assignment with values:", { title, description, course, status, dueDate })
     console.log("Will create Kanban board:", createKanbanBoard)
 
-    // Convert dueDate from local (datetime-local) to UTC so it matches user input
+    // Convert dueDate from local (datetime-local) to UTC (handled by JS Date)
     let dueDateUTC: Date | null = null;
     if (dueDate) {
       // dueDate is string like "2025-05-22T15:00"
-      // treat as local time, convert to UTC
-      const localDate = new Date(dueDate);
-      dueDateUTC = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+      // new Date(dueDate) will treat as local time and store as UTC in DB
+      dueDateUTC = new Date(dueDate);
     }
 
     // Create a new assignment

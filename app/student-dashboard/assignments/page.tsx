@@ -474,8 +474,16 @@ export default function AssignmentsPage() {
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "No due date"
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    const date = new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z')
+    return date.toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
   }
 
   // Add this function after the getStatusColor function
@@ -1007,8 +1015,8 @@ export default function AssignmentsPage() {
                   <Label htmlFor="edit-dueDate">Due Date <span className="text-red-500">*</span></Label>
                   <Input
                     id="edit-dueDate"
-                    type="date"
-                    value={editForm.dueDate}
+                    type="datetime-local"
+                    value={editForm.dueDate ? editForm.dueDate.slice(0, 16) : ""}
                     onChange={(e) => setEditForm({...editForm, dueDate: e.target.value})}
                   />
                 </div>

@@ -19,13 +19,23 @@ export function formatBytes(bytes: number, decimals = 2) {
 
 export const formatDate = (dateString: string | undefined | null) => {
   if (!dateString) return "No date";
-  
   try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return "Invalid date";
+    // Always parse as UTC and display as Asia/Jakarta
+    let date: Date;
+    if (dateString.endsWith('Z')) {
+      date = new Date(dateString);
+    } else {
+      date = new Date(dateString + 'Z');
     }
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return date.toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   } catch (error) {
     return "Invalid date";
   }

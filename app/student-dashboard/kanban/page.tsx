@@ -12,6 +12,7 @@ import { AnimatedSection } from "@/components/animated-section"
 import { useToast } from "@/components/ui/use-toast"
 import { useRBAC } from "@/hooks/use-rbac"
 import { useAssignment } from "@/hooks/use-assignment"
+import { formatDate } from "@/lib/utils"
 import { Search, Calendar, Star, StarOff, Kanban, Clock, ArrowRight, Eye } from "lucide-react"
 
 export default function StudentKanbanPage() {
@@ -337,7 +338,7 @@ const AssignmentCard = ({
             {assignment.dueDate && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
-                <span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+                <span>Due: {formatDate(assignment.dueDate)}</span>
               </div>
             )}
           </div>

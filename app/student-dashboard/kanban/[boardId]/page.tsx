@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { formatDate } from "@/lib/utils"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -449,7 +450,7 @@ export default function KanbanBoardPage() {
                         {task.dueDate && (
                           <div className="flex items-center mt-2 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3 mr-1" />
-                            {new Date(task.dueDate).toLocaleDateString()}
+                            {formatDate(task.dueDate)}
                           </div>
                         )}
                       </CardContent>
@@ -540,7 +541,7 @@ export default function KanbanBoardPage() {
               {board?.assignment?.dueDate ? (
                 <div className="text-sm text-muted-foreground mt-2">
                   <p className="font-medium">Assignment Deadline:</p>
-                  <p>{new Date(board.assignment.dueDate).toLocaleDateString()}</p>
+                  <p>{formatDate(board.assignment.dueDate)}</p>
                   <p className="mt-1 text-xs">Note: Task due date cannot exceed this deadline</p>
                 </div>
               ) : (
@@ -580,7 +581,7 @@ export default function KanbanBoardPage() {
               {selectedTask.dueDate && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span>Due {new Date(selectedTask.dueDate).toLocaleDateString()}</span>
+                  <span>Due {formatDate(selectedTask.dueDate)}</span>
                 </div>
               )}
 

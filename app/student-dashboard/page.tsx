@@ -5,6 +5,7 @@ import {
   Calendar, ArrowRight, ArrowLeft, ExternalLink, X, Info, AlertCircle, FileCode, Calculator,
   CheckCircle2, XCircle
 } from "lucide-react"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { AnimatedSection } from "@/components/animated-section"
 import { useRBAC } from "@/hooks/use-rbac"
@@ -154,7 +155,7 @@ const KanbanBoard = ({ columns = [] }: { columns: KanbanColumn[] }) => {
               <div key={task.id} className="bg-background p-3 rounded-md shadow-sm">
                 <h4 className="font-medium">{task.title}</h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No deadline'}
+                  {task.dueDate ? formatDate(task.dueDate) : 'No deadline'}
                 </p>
               </div>
             ))}
@@ -393,12 +394,7 @@ export default function StudentDashboard() {
                         <span className="font-medium">{assignment.title}</span>
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 'No due date'}
+                        {assignment.dueDate ? formatDate(assignment.dueDate) : 'No due date'}
                       </span>
                     </li>
                   ))}
@@ -636,14 +632,7 @@ export default function StudentDashboard() {
                   <div>
                     <p className="font-medium">Due Date</p>
                     <p>
-                      {selectedAssignment.dueDate ? new Date(selectedAssignment.dueDate).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : 'No due date'}
+                      {selectedAssignment.dueDate ? formatDate(selectedAssignment.dueDate) : 'No due date'}
                     </p>
                   </div>
                   

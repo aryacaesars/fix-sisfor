@@ -72,44 +72,56 @@ export async function GET(req: Request) {
         return false;
       });
 
+      // Tambahkan log assignment yang masuk window
+      console.log(`[CRON_ASSIGNMENT_EMAIL] User: ${user.email}, Assignments for reminder:`, assignmentsForReminder.map(a => ({
+        title: a.title,
+        dueDate: a.dueDate,
+      })));
+
       if (assignmentsForReminder.length > 0) {
-        await sendEmail({
-          to: user.email,
-          subject: 'Reminder Assignment Mendekati Deadline',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <h2 style="color: #333; text-align: center;">Reminder Assignment Mendekati Deadline</h2>
-              <p>Halo ${user.name || 'Mahasiswa'},</p>
-              <p>Berikut assignment yang segera deadline (H-1 hari, H-6 jam, atau H-1 jam):</p>
-              <ul style="list-style: none; padding: 0;">
-                ${assignmentsForReminder.map((assignment) => {
-                  if (!assignment.dueDate) return '';
-                  const dueDate = new Date(assignment.dueDate);
-                  const diffMs = dueDate.getTime() - now.getTime();
-                  const diffHours = diffMs / (1000 * 60 * 60);
-                  let label = '';
-                  if (diffHours <= 24.5 && diffHours > 23.5) label = 'H-1 Hari';
-                  else if (diffHours <= 12.5 && diffHours > 11.5) label = 'H-12 Jam';
-                  else if (diffHours <= 6.5 && diffHours > 5.5) label = 'H-6 Jam';
-                  else if (diffHours <= 1.5 && diffHours > 0.5) label = 'H-1 Jam';
-                  return `
-                    <li style="margin-bottom: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
-                      <strong>${assignment.title}</strong><br>
-                      Mata Kuliah: ${assignment.course || 'Tidak ada'}<br>
-                      Deadline: ${dueDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}<br>
-                      Status: ${assignment.status}<br>
-                      <span style="color: #d97706; font-weight: bold;">${label}</span>
-                    </li>
-                  `;
-                }).join('')}
-              </ul>
-              <p style="margin-top: 20px;">Silakan login ke dashboard Anda untuk melihat detail assignment.</p>
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #666; font-size: 12px;">
-                <p>© ${new Date().getFullYear()} SISFOR. Semua hak cipta dilindungi.</p>
+        try {
+          console.log(`[CRON_ASSIGNMENT_EMAIL] Sending email to: ${user.email}`);
+          await sendEmail({
+            to: user.email,
+            subject: 'Reminder Assignment Mendekati Deadline',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                <h2 style="color: #333; text-align: center;">Reminder Assignment Mendekati Deadline</h2>
+                <p>Halo ${user.name || 'Mahasiswa'},</p>
+                <p>Berikut assignment yang segera deadline (H-1 hari, H-12 jam, H-6 jam, atau H-1 jam):</p>
+                <ul style="list-style: none; padding: 0;">
+                  ${assignmentsForReminder.map((assignment) => {
+                    if (!assignment.dueDate) return '';
+                    const dueDate = new Date(assignment.dueDate);
+                    const diffMs = dueDate.getTime() - now.getTime();
+                    const diffHours = diffMs / (1000 * 60 * 60);
+                    let label = '';
+                    if (diffHours <= 24.5 && diffHours > 23.5) label = 'H-1 Hari';
+                    else if (diffHours <= 12.5 && diffHours > 11.5) label = 'H-12 Jam';
+                    else if (diffHours <= 6.5 && diffHours > 5.5) label = 'H-6 Jam';
+                    else if (diffHours <= 1.5 && diffHours > 0.5) label = 'H-1 Jam';
+                    return `
+                      <li style="margin-bottom: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
+                        <strong>${assignment.title}</strong><br>
+                        Mata Kuliah: ${assignment.course || 'Tidak ada'}<br>
+                        Deadline: ${dueDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}<br>
+                        Status: ${assignment.status}<br>
+                        <span style="color: #d97706; font-weight: bold;">${label}</span>
+                      </li>
+                    `;
+                  }).join('')}
+                </ul>
+                <p style="margin-top: 20px;">Silakan login ke dashboard Anda untuk melihat detail assignment.</p>
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #666; font-size: 12px;">
+                  <p>© ${new Date().getFullYear()} SISFOR. Semua hak cipta dilindungi.</p>
+                </div>
               </div>
-            </div>
-          `,
-        });
+            `,
+          });
+          console.log(`[CRON_ASSIGNMENT_EMAIL] Email sent to: ${user.email}`);
+        } catch (err) {
+          console.error(`[CRON_ASSIGNMENT_EMAIL] Failed to send email to ${user.email}:`, err);
+        }
       }
     }
 

@@ -53,21 +53,22 @@ export async function GET(req: Request) {
     for (const user of users) {
       if (!user.email) continue;
 
-      // Get assignments with H-1 day, H-6 jam, H-1 jam
+      // Get assignments with H-1 day, H-12 jam, H-6 jam, H-1 jam (window diperlebar biar tidak miss)
       const now = new Date();
       const assignmentsForReminder = user.assignments.filter((assignment) => {
         if (!assignment.dueDate) return false;
         const dueDate = new Date(assignment.dueDate);
-        const diffHours = differenceInHours(dueDate, now);
-        const diffDays = differenceInDays(dueDate, now);
-        // H-1 hari
-        if (diffDays === 1) return true;
-        // H-12 jam
-        if (diffHours <= 12 && diffHours > 11) return true;
-        // H-6 jam
-        if (diffHours <= 6 && diffHours > 5) return true;
-        // H-1 jam
-        if (diffHours <= 1 && diffHours > 0) return true;
+        const diffMs = dueDate.getTime() - now.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+        // H-1 hari: antara 23.5 - 24.5 jam
+        if (diffHours <= 24.5 && diffHours > 23.5) return true;
+        // H-12 jam: antara 11.5 - 12.5 jam
+        if (diffHours <= 12.5 && diffHours > 11.5) return true;
+        // H-6 jam: antara 5.5 - 6.5 jam
+        if (diffHours <= 6.5 && diffHours > 5.5) return true;
+        // H-1 jam: antara 0.5 - 1.5 jam
+        if (diffHours <= 1.5 && diffHours > 0.5) return true;
         return false;
       });
 

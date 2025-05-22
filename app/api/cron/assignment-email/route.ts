@@ -85,13 +85,13 @@ export async function GET(req: Request) {
                 ${assignmentsForReminder.map((assignment) => {
                   if (!assignment.dueDate) return '';
                   const dueDate = new Date(assignment.dueDate);
-                  const diffHours = differenceInHours(dueDate, now);
-                  const diffDays = differenceInDays(dueDate, now);
+                  const diffMs = dueDate.getTime() - now.getTime();
+                  const diffHours = diffMs / (1000 * 60 * 60);
                   let label = '';
-                  if (diffDays === 1) label = 'H-1 Hari';
-                  else if (diffHours <= 12 && diffHours > 11) label = 'H-12 Jam';
-                  else if (diffHours <= 6 && diffHours > 5) label = 'H-6 Jam';
-                  else if (diffHours <= 1 && diffHours > 0) label = 'H-1 Jam';
+                  if (diffHours <= 24.5 && diffHours > 23.5) label = 'H-1 Hari';
+                  else if (diffHours <= 12.5 && diffHours > 11.5) label = 'H-12 Jam';
+                  else if (diffHours <= 6.5 && diffHours > 5.5) label = 'H-6 Jam';
+                  else if (diffHours <= 1.5 && diffHours > 0.5) label = 'H-1 Jam';
                   return `
                     <li style="margin-bottom: 15px; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
                       <strong>${assignment.title}</strong><br>
@@ -118,4 +118,4 @@ export async function GET(req: Request) {
     console.error('[CRON_ASSIGNMENT_EMAIL]', error);
     return new NextResponse('Internal error', { status: 500 });
   }
-} 
+}

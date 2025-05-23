@@ -2,7 +2,7 @@ name: Assignment Email Cron
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Setiap jam pada menit ke-0 (UTC)
+    - cron: '0 * * * *' # Setiap jam pada menit ke-0 (UTC)
   workflow_dispatch:
 
 jobs:

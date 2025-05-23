@@ -35,6 +35,39 @@ export async function sendVerificationEmail(email: string, token: string) {
   })
 }
 
+export async function sendDeadlineReminderEmail({
+  email,
+  itemName,
+  itemType,
+  deadline,
+  timeRemaining,
+}: {
+  email: string;
+  itemName: string;
+  itemType: string; // e.g., "Assignment" or "Project"
+  deadline: Date;
+  timeRemaining: string; // e.g., "1 day", "6 hours", "1 hour"
+}) {
+  const subject = `Reminder: ${itemType} "${itemName}" Deadline Approaching`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+      <h2 style="color: #333; text-align: center;">Deadline Reminder</h2>
+      <p>Hi there,</p>
+      <p>This is a friendly reminder that the deadline for your ${itemType.toLowerCase()} <strong>"${itemName}"</strong> is approaching.</p>
+      <p><strong>Deadline:</strong> ${deadline.toLocaleString()}</p>
+      <p><strong>Time Remaining:</strong> Approximately ${timeRemaining}</p>
+      <p>Please make sure to complete it on time.</p>
+      <p>Best regards,</p>
+      <p>Ciao Platform</p>
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #666; font-size: 12px;">
+        <p>© ${new Date().getFullYear()} Ciao. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({ to: email, subject, html });
+}
+
 export async function sendEmail({ to, subject, html }: { to: string, subject: string, html: string }) {
   await transporter.sendMail({
     from: `"Ciao Support" <${process.env.EMAIL_USER}>`,

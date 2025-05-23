@@ -2,7 +2,7 @@ name: Deadline Email Cron
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Setiap hari jam 07:00 WIB (0 0 UTC)
+    - cron: '0 * * * *' # Setiap hari jam 07:00 WIB (0 0 UTC)
   workflow_dispatch:
 
 jobs:

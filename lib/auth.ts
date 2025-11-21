@@ -51,6 +51,8 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  // Trust proxy untuk production (Vercel, dll)
+  trustHost: true,
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

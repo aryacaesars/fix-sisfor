@@ -32,27 +32,42 @@ export default function VerifyEmailPage() {
       setStatusMessage("Verifying your email...")
 
       // Panggil API verifikasi
-      fetch(`/api/verify-email?token=${token}`)
+      fetch(`/api/verify-email?token=${encodeURIComponent(token)}`)
         .then(async (response) => {
-          if (response.ok || response.redirected) {
+          // Check if response is ok before trying to parse JSON
+          if (!response.ok && response.status === 404) {
+            throw new Error("Verification endpoint not found. Please contact support.")
+          }
+
+          let data
+          try {
+            data = await response.json()
+          } catch (parseError) {
+            throw new Error("Invalid response from server. Please try again.")
+          }
+          
+          if (response.ok && data.success) {
             setVerificationStatus("success")
-            setStatusMessage("Email successfully verified! You will be redirected to the login page.")
+            setStatusMessage(data.message || "Email successfully verified! You will be redirected to the login page.")
 
             // Redirect ke halaman login setelah beberapa detik
             setTimeout(() => {
-              router.push("/auth/login?verified=true")
-            }, 3000)
+              router.push(data.redirectUrl || "/auth/login?verified=true")
+            }, 2000)
           } else {
-            const data = await response.json()
-            throw new Error(data.error || "Failed to verify email")
+            // Handle error response
+            const errorMessage = data.message || data.error || "Failed to verify email"
+            throw new Error(errorMessage)
           }
         })
         .catch((error) => {
+          console.error("Verification error:", error)
           setVerificationStatus("error")
-          setStatusMessage(error.message || "An error occurred while verifying email")
+          const errorMessage = error.message || "An error occurred while verifying email"
+          setStatusMessage(errorMessage)
           toast({
             title: "Verification failed",
-            description: error.message || "An error occurred while verifying email",
+            description: errorMessage,
             variant: "destructive",
           })
         })

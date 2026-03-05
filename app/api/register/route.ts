@@ -46,6 +46,7 @@ export async function POST(request: Request) {
         identifier: email,
         token,
         expires,
+        type: "email-verification",
       },
     })
 

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       where: { token },
     })
 
-    if (!verificationToken) {
+    if (!verificationToken || verificationToken.type !== "email-verification") {
       console.error("Token not found in database:", token)
       return NextResponse.json({ 
         error: "Token tidak valid",

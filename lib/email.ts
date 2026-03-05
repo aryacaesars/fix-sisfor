@@ -35,6 +35,32 @@ export async function sendVerificationEmail(email: string, token: string) {
   })
 }
 
+export async function sendPasswordResetEmail(email: string, token: string) {
+  const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`
+
+  await transporter.sendMail({
+    from: `"Ciao Support" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Reset Your Password",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h2 style="color: #333; text-align: center;">Reset Your Password</h2>
+        <p>We received a request to reset the password for your Ciao account. If you made this request, please click the button below to set a new password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #000; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>Or, you can copy and paste the following URL into your browser:</p>
+        <p style="word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">${resetUrl}</p>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you did not request a password reset, you can safely ignore this email and your password will remain unchanged.</p>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #666; font-size: 12px;">
+          <p>© ${new Date().getFullYear()} Ciao. All rights reserved.</p>
+        </div>
+      </div>
+    `,
+  })
+}
+
 export async function sendDeadlineReminderEmail({
   email,
   itemName,
